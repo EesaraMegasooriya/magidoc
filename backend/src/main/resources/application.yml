@@ -1,0 +1,81 @@
+spring:
+  application:
+    name: magidoc
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jackson:
+    default-property-inclusion: always
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: ${PORT:8080}
+  compression:
+    enabled: true
+
+magidoc:
+  jwt:
+    # MUST be overridden in production (min 32 characters)
+    secret: ${MAGIDOC_JWT_SECRET:dev-only-secret-change-me-in-production-0123456789}
+    expiration: ${MAGIDOC_JWT_EXPIRATION:7d}
+  auth:
+    # Session cookie is HttpOnly + SameSite=Lax; Secure must be on when served over HTTPS
+    cookie-secure: ${MAGIDOC_COOKIE_SECURE:false}
+  cors:
+    # Comma-separated origins or patterns. Set exact origins in production, e.g. https://magidoc.example.com
+    allowed-origins: ${MAGIDOC_CORS_ORIGINS:http://localhost:*,http://127.0.0.1:*}
+  proxy:
+    connect-timeout: 10s
+    request-timeout: 60s
+    max-response-bytes: 10485760
+    # Set to true on shared/public deployments to prevent SSRF against internal networks
+    block-private-networks: ${MAGIDOC_PROXY_BLOCK_PRIVATE:false}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:h2:file:./data/magidoc;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/magidoc}
+    username: ${DB_USERNAME:magidoc}
+    password: ${DB_PASSWORD:magidoc}
+server:
+  # Trust X-Forwarded-* from the reverse proxy so rate limits see real client IPs
+  forward-headers-strategy: native
+magidoc:
+  auth:
+    cookie-secure: ${MAGIDOC_COOKIE_SECURE:true}

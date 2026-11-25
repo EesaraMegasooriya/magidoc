@@ -1,0 +1,20 @@
+# Backend
+backend/target/
+backend/data/
+*.log
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# Env & IDE
+.env
+.idea/
+.vscode/
+.DS_Store
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/

@@ -1,0 +1,10 @@
+{
+  "info": {"name": "Users API v2", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"},
+  "item": [
+    {"name": "Users", "item": [
+      {"name": "List all users", "request": {"method": "GET", "url": {"raw": "{{baseUrl}}/users?_limit=5"}, "description": "Now paginated"}},
+      {"name": "Create user", "request": {"method": "POST", "url": "{{baseUrl}}/users", "body": {"mode": "raw", "raw": "{\"name\":\"Ada\"}", "options": {"raw": {"language": "json"}}}}}
+    ]},
+    {"name": "Todos", "item": [{"name": "List todos", "request": {"method": "GET", "url": "{{baseUrl}}/todos"}}]}
+  ]
+}

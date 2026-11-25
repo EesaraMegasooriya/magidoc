@@ -1,0 +1,255 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* `dark:` utilities follow the .dark class on <html> (set by the theme store). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens. Components only use these semantic names, never raw palette colours,
+ * so every screen works in both light and dark themes.
+ */
+@theme inline {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-bg: var(--bg);
+  --color-panel: var(--surface);
+  --color-panel-2: var(--surface-2);
+  --color-panel-3: var(--surface-3);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-overlay: var(--overlay);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+  --color-on-accent: var(--on-accent);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --color-m-get: var(--m-get);
+  --color-m-post: var(--m-post);
+  --color-m-put: var(--m-put);
+  --color-m-patch: var(--m-patch);
+  --color-m-delete: var(--m-delete);
+  --color-m-head: var(--m-head);
+  --color-m-options: var(--m-options);
+}
+
+:root {
+  color-scheme: light;
+  --bg: #f6f6f8;
+  --surface: #ffffff;
+  --surface-2: #f3f3f6;
+  --surface-3: #e9e9ee;
+  --border: #e3e3e9;
+  --border-strong: #cfcfd8;
+  --fg: #16161d;
+  --muted: #5b5b6b;
+  --faint: #8a8a99;
+  --overlay: rgb(15 15 25 / 0.45);
+
+  --accent: #6d4aff;
+  --accent-strong: #5b36f2;
+  --accent-soft: rgb(109 74 255 / 0.09);
+  --accent-fg: #5634e0;
+  --on-accent: #ffffff;
+
+  --success: #047857;
+  --success-soft: rgb(5 150 105 / 0.1);
+  --warning: #b45309;
+  --warning-soft: rgb(217 119 6 / 0.12);
+  --danger: #c81e3a;
+  --danger-soft: rgb(225 29 72 / 0.09);
+  --info: #0369a1;
+  --info-soft: rgb(2 132 199 / 0.1);
+
+  --m-get: #047857;
+  --m-post: #b45309;
+  --m-put: #0369a1;
+  --m-patch: #6d28d9;
+  --m-delete: #be123c;
+  --m-head: #0f766e;
+  --m-options: #be185d;
+
+  --code-bg: #fbfbfc;
+  --j-key: #6d28d9;
+  --j-str: #047857;
+  --j-num: #c2410c;
+  --j-bool: #be185d;
+  --j-null: #64748b;
+}
+
+.dark {
+  color-scheme: dark;
+  --bg: #0b0b0f;
+  --surface: #121217;
+  --surface-2: #18181f;
+  --surface-3: #212129;
+  --border: #25252e;
+  --border-strong: #33333e;
+  --fg: #ececf1;
+  --muted: #a1a1b0;
+  --faint: #6e6e7d;
+  --overlay: rgb(0 0 0 / 0.6);
+
+  --accent: #7c5cff;
+  --accent-strong: #8f74ff;
+  --accent-soft: rgb(124 92 255 / 0.15);
+  --accent-fg: #b9a8ff;
+  --on-accent: #ffffff;
+
+  --success: #34d399;
+  --success-soft: rgb(52 211 153 / 0.12);
+  --warning: #fbbf24;
+  --warning-soft: rgb(251 191 36 / 0.12);
+  --danger: #fb7185;
+  --danger-soft: rgb(251 113 133 / 0.12);
+  --info: #38bdf8;
+  --info-soft: rgb(56 189 248 / 0.12);
+
+  --m-get: #34d399;
+  --m-post: #fbbf24;
+  --m-put: #38bdf8;
+  --m-patch: #a78bfa;
+  --m-delete: #fb7185;
+  --m-head: #2dd4bf;
+  --m-options: #f472b6;
+
+  --code-bg: #0d0d12;
+  --j-key: #c4b5fd;
+  --j-str: #86efac;
+  --j-num: #fdba74;
+  --j-bool: #f9a8d4;
+  --j-null: #94a3b8;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv11", "ss01";
+}
+
+::selection {
+  background: rgb(109 74 255 / 0.25);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* Smooth theme switches without animating every hover */
+.theme-transition, .theme-transition * {
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Brand gradient is reserved for the logo and tiny brand accents */
+.brand-gradient {
+  background-image: linear-gradient(135deg, #a855f7 0%, #6366f1 50%, #ec4899 100%);
+}
+
+.brand-text {
+  background-image: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.dot-grid {
+  background-image: radial-gradient(var(--border-strong) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+.code-area {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.65;
+  tab-size: 2;
+}
+
+.code-surface {
+  background: var(--code-bg);
+}
+
+/* JSON syntax colours */
+.j-key { color: var(--j-key); }
+.j-str { color: var(--j-str); }
+.j-num { color: var(--j-num); }
+.j-bool { color: var(--j-bool); }
+.j-null { color: var(--j-null); }
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-3);
+  border-radius: 6px;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.25), transparent);
+  animation: shimmer 1.4s infinite;
+}
+.dark .skeleton::after {
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.05), transparent);
+}
+
+.prose-magi {
+  --tw-prose-body: var(--fg);
+  --tw-prose-headings: var(--fg);
+  --tw-prose-links: var(--accent-fg);
+  --tw-prose-bold: var(--fg);
+  --tw-prose-code: var(--accent-fg);
+  --tw-prose-quotes: var(--muted);
+  --tw-prose-bullets: var(--faint);
+  --tw-prose-counters: var(--faint);
+  --tw-prose-hr: var(--border);
+  --tw-prose-th-borders: var(--border-strong);
+  --tw-prose-td-borders: var(--border);
+  --tw-prose-pre-bg: var(--code-bg);
+  --tw-prose-pre-code: var(--fg);
+}
+
+/* GFM task lists: show the checkbox instead of a bullet */
+.prose li:has(> input[type="checkbox"]) {
+  list-style: none;
+  margin-left: -1.25em;
+}
+.prose li > input[type="checkbox"] {
+  margin: 0 0.5em 0 0;
+  accent-color: var(--accent);
+  vertical-align: middle;
+}

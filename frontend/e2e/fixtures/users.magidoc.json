@@ -1,0 +1,7 @@
+{
+  "magidoc": "1.0", "name": "Users API",
+  "variables": [{"key": "baseUrl", "value": "https://jsonplaceholder.typicode.com"}],
+  "items": [{"type": "folder", "name": "Users", "items": [
+    {"type": "request", "name": "List users", "method": "GET", "url": "{{baseUrl}}/users"},
+    {"type": "request", "name": "Get user", "method": "GET", "url": "{{baseUrl}}/users/1"}]}]
+}

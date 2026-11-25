@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: magidoc
+      POSTGRES_USER: magidoc
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-magidoc}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U magidoc -d magidoc"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/magidoc
+      DB_USERNAME: magidoc
+      DB_PASSWORD: ${DB_PASSWORD:-magidoc}
+      # REQUIRED: set a long random secret, e.g. `openssl rand -base64 48`
+      MAGIDOC_JWT_SECRET: ${MAGIDOC_JWT_SECRET:?Set MAGIDOC_JWT_SECRET in .env}
+      MAGIDOC_CORS_ORIGINS: ${MAGIDOC_CORS_ORIGINS:-http://localhost:3000}
+      MAGIDOC_PROXY_BLOCK_PRIVATE: ${MAGIDOC_PROXY_BLOCK_PRIVATE:-true}
+      # Secure cookies need HTTPS. This compose file serves plain http://localhost:3000, so it defaults to false;
+      # set MAGIDOC_COOKIE_SECURE=true when you put it behind HTTPS (always in production).
+      MAGIDOC_COOKIE_SECURE: ${MAGIDOC_COOKIE_SECURE:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

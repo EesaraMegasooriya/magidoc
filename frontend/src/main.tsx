@@ -7,8 +7,11 @@ import App from './App';
 import { ConfirmHost } from './components/ConfirmHost';
 import './index.css';
 import { initTheme } from './store/theme';
+import { installChunkErrorRecovery } from './lib/version';
+import { UpdateBanner } from './components/UpdateBanner';
 
 initTheme();
+installChunkErrorRecovery();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,6 +25,7 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <App />
         <ConfirmHost />
+        <UpdateBanner />
         <Toaster
           position="bottom-right"
           gutter={8}

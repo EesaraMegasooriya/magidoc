@@ -1,0 +1,12 @@
+{
+  "info": { "name": "CMS V2 Documentation", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "item": [
+    { "name": "External User", "item": [ { "name": "Chat", "item": [ { "name": "List chats", "request": { "method": "GET", "url": "{{baseUrl}}/chats" } } ] } ] },
+    { "name": "Internal User", "item": [] },
+    { "name": "External User/Quiz", "item": [ { "name": "Get quiz", "request": { "method": "GET", "url": "{{baseUrl}}/quiz" } } ] },
+    { "name": "External User/Networking", "item": [ { "name": "Connections", "request": { "method": "GET", "url": "{{baseUrl}}/networking" } } ] },
+    { "name": "External User/Session/All Sessions", "item": [ { "name": "All", "request": { "method": "GET", "url": "{{baseUrl}}/sessions" } } ] },
+    { "name": "External User/Session/Physical", "item": [ { "name": "Physical", "request": { "method": "GET", "url": "{{baseUrl}}/sessions/physical" } } ] },
+    { "name": "Internal User/User Groups", "item": [ { "name": "List groups", "request": { "method": "GET", "url": "{{baseUrl}}/groups" } } ] }
+  ]
+}

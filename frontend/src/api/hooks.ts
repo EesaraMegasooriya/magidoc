@@ -306,6 +306,26 @@ export const useMergeIntoCollection = (wsId: string) =>
     { invalidate: (v) => colKeys(wsId, v.collectionId), success: mergeMessage },
   );
 
+export interface OrganizeResult {
+  foldersMoved: number;
+  foldersMerged: number;
+  foldersCreated: number;
+  requestsMoved: number;
+}
+
+/** Turns "Folder/Name" names in an existing collection into real (nested) folders, in place. */
+export const useOrganizeFolderPaths = (wsId: string) =>
+  useApiMutation(
+    (collectionId: string) => api.post<OrganizeResult>(`/collections/${collectionId}/organize-folder-paths`).then((r) => r.data),
+    {
+      invalidate: (collectionId) => colKeys(wsId, collectionId),
+      success: (r) => {
+        const moved = r.foldersMoved + r.foldersMerged + r.requestsMoved;
+        return moved === 0 ? 'Already organized — nothing to change' : `Organized ${moved} item${moved === 1 ? '' : 's'} into folders`;
+      },
+    },
+  );
+
 export const useUpdateCollection = (wsId: string) =>
   useApiMutation(
     (v: { id: string; name?: string; description?: string; variables?: Variable[]; auth?: AuthConfig }) => {

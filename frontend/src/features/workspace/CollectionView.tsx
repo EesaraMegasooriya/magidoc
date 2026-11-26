@@ -27,6 +27,7 @@ import type { AuthConfig, CollectionDetail, Variable } from '../../types';
 import { AuthEditor } from './AuthEditor';
 import { CodeTextarea } from './BodyEditor';
 import { useScope, useWs } from './context';
+import { OrganizeBanner } from './OrganizeFolders';
 
 type Section = 'overview' | 'variables' | 'auth' | 'runner' | 'share';
 
@@ -38,6 +39,7 @@ export function CollectionView({ tab }: { tab: Tab }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <CollectionHeader detail={detail} />
+      <OrganizeBanner detail={detail} />
       <div className="border-b border-line px-4">
         <Segmented
           value={section}

@@ -217,6 +217,79 @@ class MagiDocIntegrationTest {
     }
 
     @Test
+    void organizeFolderPathsRestructuresAnExistingCollectionInPlace() throws Exception {
+        String token = register("Olga", "olga-" + UUID.randomUUID().toString().substring(0, 8) + "@example.com");
+        String wsId = call(post("/api/workspaces"), token, "{\"name\":\"CMS\"}", 201).get("id").asText();
+        // Shaped like a collection imported before folder paths were understood
+        String cms = """
+                {"magidoc":"1.0","name":"CMS V2 Documentation","items":[
+                  {"type":"folder","name":"External User","items":[
+                     {"type":"folder","name":"Chat","items":[{"type":"request","name":"List chats","method":"GET","url":"{{baseUrl}}/chats"}]}]},
+                  {"type":"folder","name":"Internal User","items":[]},
+                  {"type":"folder","name":"External User/Quiz","items":[
+                     {"type":"request","name":"Get quiz","method":"GET","url":"{{baseUrl}}/quiz"}]},
+                  {"type":"folder","name":"external user/Chat","items":[
+                     {"type":"request","name":"Send message","method":"POST","url":"{{baseUrl}}/chats"}]},
+                  {"type":"folder","name":"External User/Session/All Sessions","items":[
+                     {"type":"request","name":"All","method":"GET","url":"{{baseUrl}}/sessions"}]},
+                  {"type":"folder","name":"External User/Session/Physical","items":[
+                     {"type":"request","name":"Physical","method":"GET","url":"{{baseUrl}}/sessions/physical"}]},
+                  {"type":"folder","name":"Internal User/Conferences","items":[
+                     {"type":"request","name":"Conferences/Create","method":"POST","url":"{{baseUrl}}/conferences"}]},
+                  {"type":"folder","name":"GET /legacy","items":[]},
+                  {"type":"request","name":"Internal User/Ping","method":"GET","url":"{{baseUrl}}/ping"}
+                ]}
+                """;
+        String colId = call(post("/api/workspaces/" + wsId + "/collections/import"), token, cms, 201).get("id").asText();
+        JsonNode before = call(get("/api/collections/" + colId), token, null, 200);
+        String quizRequestId = idOf(before.get("requests"), "Get quiz");
+        assertThat(before.get("requests")).hasSize(7);
+
+        JsonNode result = call(post("/api/collections/" + colId + "/organize-folder-paths"), token, null, 200);
+        assertThat(result.get("foldersMerged").asInt()).isEqualTo(1);   // "external user/Chat" → existing Chat
+        assertThat(result.get("foldersCreated").asInt()).isEqualTo(2);  // Session + Conferences/ (for the request)
+        assertThat(result.get("requestsMoved").asInt()).isEqualTo(2);   // Internal User/Ping, Conferences/Create
+
+        JsonNode after = call(get("/api/collections/" + colId), token, null, 200);
+        assertThat(tree(after)).isEqualTo(
+                "External User[Chat[List chats, Send message], Quiz[Get quiz], Session[All Sessions[All], Physical[Physical]]], "
+                        + "Internal User[Conferences[Conferences[Create]], Ping], GET /legacy[]");
+        assertThat(after.get("requests")).hasSize(7);                    // nothing lost
+        assertThat(idOf(after.get("requests"), "Get quiz")).isEqualTo(quizRequestId); // ids preserved
+
+        // Running again changes nothing
+        JsonNode again = call(post("/api/collections/" + colId + "/organize-folder-paths"), token, null, 200);
+        assertThat(again.get("foldersMoved").asInt() + again.get("foldersMerged").asInt()
+                + again.get("foldersCreated").asInt() + again.get("requestsMoved").asInt()).isZero();
+    }
+
+    private static String idOf(JsonNode requests, String name) {
+        for (JsonNode r : requests) if (r.get("name").asText().equals(name)) return r.get("id").asText();
+        throw new AssertionError("no request " + name);
+    }
+
+    /** Folder tree as "Folder[child, child]", folders by sort order then requests — like the sidebar. */
+    private static String tree(JsonNode detail) {
+        return children(detail, null);
+    }
+
+    private static String children(JsonNode detail, String parentId) {
+        java.util.List<JsonNode> fs = new java.util.ArrayList<>();
+        detail.get("folders").forEach(f -> {
+            String p = f.get("parentId").isNull() ? null : f.get("parentId").asText();
+            if (java.util.Objects.equals(p, parentId)) fs.add(f);
+        });
+        fs.sort(java.util.Comparator.comparingInt((JsonNode f) -> f.get("sortOrder").asInt()));
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        for (JsonNode f : fs) parts.add(f.get("name").asText() + "[" + children(detail, f.get("id").asText()) + "]");
+        detail.get("requests").forEach(r -> {
+            String p = r.get("folderId").isNull() ? null : r.get("folderId").asText();
+            if (java.util.Objects.equals(p, parentId)) parts.add(r.get("name").asText());
+        });
+        return String.join(", ", parts);
+    }
+
+    @Test
     void websocketConnectionsAreSavedPerWorkspace() throws Exception {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         String owner = register("Wes", "wes-" + suffix + "@example.com");

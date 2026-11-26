@@ -539,3 +539,11 @@ export function groupByFolderPaths(items: ExportItem[] | undefined): ExportItem[
   }
   return out;
 }
+
+/** Names in an existing collection that "Organize into folders" would restructure. */
+export function pathNamesInCollection(detail: { folders: { name: string }[]; requests: { name: string }[] }): string[] {
+  return [
+    ...detail.folders.filter((f) => splitFolderPath(f.name) || /\/\s*$/.test(f.name)).map((f) => f.name),
+    ...detail.requests.filter((r) => splitFolderPath(r.name)).map((r) => r.name),
+  ];
+}

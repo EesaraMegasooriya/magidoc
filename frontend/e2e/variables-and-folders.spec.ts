@@ -76,3 +76,33 @@ test('import puts "Folder/Name" items into folders', async ({ page }) => {
   await sidebar.getByText('Payments', { exact: true }).click();
   await expect(sidebar.getByText('Refund', { exact: true })).toBeVisible();
 });
+
+test('an already-imported collection can be organized into folders', async ({ page }) => {
+  // Import the way older versions did: folder-path names kept as plain folder names.
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Import' });
+  await dialog.locator('input[type=file][multiple]').setInputFiles(path.join(fixtures, 'cms-flat-folders.postman.json'));
+  await dialog.getByRole('checkbox', { name: /Create folders from names/ }).uncheck();
+  await dialog.getByRole('button', { name: 'Import collection' }).click();
+
+  const sidebar = page.locator('aside');
+  await sidebar.getByText('CMS V2 Documentation', { exact: true }).click();
+  await expect(sidebar.getByText('External User/Quiz', { exact: true })).toBeVisible();
+
+  await sidebar.getByRole('button', { name: /5 items look like “Folder\/Name”/ }).click();
+  await page.getByRole('dialog', { name: /Organize “CMS V2 Documentation” into folders/ }).getByRole('button', { name: 'Organize' }).click();
+  await expect(page.getByText(/Organized \d+ items into folders/)).toBeVisible();
+
+  // Top level now has just the two folders; the rest moved inside them
+  await expect(sidebar.getByText('External User/Quiz', { exact: true })).toBeHidden();
+  await expect(sidebar.getByRole('button', { name: /look like “Folder\/Name”/ })).toBeHidden();
+  await sidebar.getByRole('button', { name: 'Folder External User' }).click();
+  for (const name of ['Chat', 'Quiz', 'Networking', 'Session']) {
+    await expect(sidebar.getByRole('button', { name: `Folder ${name}`, exact: true })).toBeVisible();
+  }
+  await sidebar.getByRole('button', { name: 'Folder Session' }).click();
+  await expect(sidebar.getByRole('button', { name: 'Folder All Sessions', exact: true })).toBeVisible();
+  await expect(sidebar.getByRole('button', { name: 'Folder Physical', exact: true })).toBeVisible();
+  await sidebar.getByRole('button', { name: 'Folder Internal User' }).click();
+  await expect(sidebar.getByRole('button', { name: 'Folder User Groups', exact: true })).toBeVisible();
+});

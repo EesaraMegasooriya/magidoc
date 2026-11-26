@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ExportItem } from '../types';
-import { findFolderPathNames, groupByFolderPaths, splitFolderPath } from './interchange';
+import { findFolderPathNames, groupByFolderPaths, pathNamesInCollection, splitFolderPath } from './interchange';
 
 const req = (name: string): ExportItem => ({ type: 'request', name, method: 'GET', url: '{{baseUrl}}/x' });
 const folder = (name: string, items: ExportItem[] = []): ExportItem => ({ type: 'folder', name, items });
@@ -13,6 +13,8 @@ describe('splitFolderPath', () => {
     ['External/Get users', ['External', 'Get users']],
     ['External/ Get users', ['External', 'Get users']],
     ['External/Payments/Refund', ['External', 'Payments', 'Refund']],
+    ['External User/Quiz', ['External User', 'Quiz']],
+    ['External User/Session/All Sessions', ['External User', 'Session', 'All Sessions']],
     ['  External / Payments ', null], // "/" preceded by a space looks like a path, not a folder
     ['External/', null],
     ['GET /users/{id}', null],
@@ -77,5 +79,15 @@ describe('groupByFolderPaths', () => {
 describe('findFolderPathNames', () => {
   it('finds path names at any depth, including trailing-slash folders', () => {
     expect(findFolderPathNames([req('A/B'), folder('X/', [req('Y/Z'), req('plain')]), req('GET /x')])).toEqual(['A/B', 'X/', 'Y/Z']);
+  });
+});
+
+describe('pathNamesInCollection', () => {
+  it('lists folder and request names that are folder paths', () => {
+    const detail = {
+      folders: [{ name: 'External User' }, { name: 'External User/Quiz' }, { name: 'Misc/' }, { name: 'GET /legacy' }],
+      requests: [{ name: 'Internal User/Ping' }, { name: 'Health' }],
+    };
+    expect(pathNamesInCollection(detail)).toEqual(['External User/Quiz', 'Misc/', 'Internal User/Ping']);
   });
 });

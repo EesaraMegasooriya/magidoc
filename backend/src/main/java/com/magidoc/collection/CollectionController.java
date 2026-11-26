@@ -10,6 +10,7 @@ import com.magidoc.collection.CollectionDtos.ExportCollection;
 import com.magidoc.collection.CollectionDtos.FolderDto;
 import com.magidoc.collection.CollectionDtos.MergeRequest;
 import com.magidoc.collection.CollectionDtos.MergeResult;
+import com.magidoc.collection.CollectionDtos.OrganizeResult;
 import com.magidoc.collection.CollectionDtos.MoveApiRequest;
 import com.magidoc.collection.CollectionDtos.MoveFolder;
 import com.magidoc.collection.CollectionDtos.RequestDto;
@@ -70,6 +71,12 @@ public class CollectionController {
     @PostMapping("/collections/{id}/merge")
     public MergeResult merge(@PathVariable UUID id, @Valid @RequestBody MergeRequest req) {
         return collectionService.merge(id, req);
+    }
+
+    /** Turns "Folder/Name" style names into real (nested) folders, in place. */
+    @PostMapping("/collections/{id}/organize-folder-paths")
+    public OrganizeResult organizeFolderPaths(@PathVariable UUID id) {
+        return collectionService.organizeFolderPaths(id);
     }
 
     @GetMapping("/collections/{id}")

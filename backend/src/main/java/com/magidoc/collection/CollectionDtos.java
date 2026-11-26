@@ -73,6 +73,13 @@ public final class CollectionDtos {
     public record MergeResult(CollectionDto collection, int requestsAdded, int requestsUpdated, int foldersAdded) {
     }
 
+    /** Outcome of turning "Folder/Name" names into real folders inside an existing collection. */
+    public record OrganizeResult(int foldersMoved, int foldersMerged, int foldersCreated, int requestsMoved) {
+        public boolean changed() {
+            return foldersMoved + foldersMerged + foldersCreated + requestsMoved > 0;
+        }
+    }
+
     /** Portable, nested export format ("MagiDoc collection v1"). */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record ExportCollection(String magidoc, @NotBlank @Size(max = 150) String name, String description,

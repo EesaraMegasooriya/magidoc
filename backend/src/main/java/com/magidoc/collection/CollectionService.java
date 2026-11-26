@@ -13,6 +13,7 @@ import com.magidoc.collection.CollectionDtos.ExportItem;
 import com.magidoc.collection.CollectionDtos.FolderDto;
 import com.magidoc.collection.CollectionDtos.MergeRequest;
 import com.magidoc.collection.CollectionDtos.MergeResult;
+import com.magidoc.collection.CollectionDtos.OrganizeResult;
 import com.magidoc.collection.CollectionDtos.MoveFolder;
 import com.magidoc.collection.CollectionDtos.UpdateCollection;
 import com.magidoc.collection.CollectionDtos.UpdateFolder;
@@ -393,6 +394,133 @@ public class CollectionService {
         if (items == null) return 0;
         return items.stream().filter(i -> i != null && "folder".equalsIgnoreCase(i.type()))
                 .mapToInt(i -> 1 + countFolders(i.items())).sum();
+    }
+
+    // ---------- Organize "Folder/Name" names into folders ----------
+
+    /** Mutable counters for {@link #organizeFolderPaths}. */
+    private static final class OrganizeStats {
+        int foldersMoved;
+        int foldersMerged;
+        int foldersCreated;
+        int requestsMoved;
+    }
+
+    /**
+     * Turns names like "External User/Quiz" into real folders inside an existing collection: the folder becomes
+     * "Quiz" inside "External User" (created if missing, matched case-insensitively), deeper paths create nested
+     * folders, and same-named folders are merged. Entities are moved/renamed in place, so request ids (open tabs,
+     * history, examples, share links) are preserved. Safe to run repeatedly.
+     */
+    @Transactional
+    public OrganizeResult organizeFolderPaths(UUID collectionId) {
+        ApiCollection c = loadWithAccess(collectionId, WorkspaceRole.EDITOR);
+        List<Folder> fs = new ArrayList<>(folders.findByCollectionIdOrderBySortOrderAscCreatedAtAsc(c.getId()));
+        List<ApiRequest> rs = new ArrayList<>(requests.findByCollectionIdOrderBySortOrderAscCreatedAtAsc(c.getId()));
+        OrganizeStats st = new OrganizeStats();
+
+        for (Folder f : new ArrayList<>(fs)) {
+            if (!fs.contains(f)) continue; // already merged into another folder
+            List<String> parts = FolderPaths.split(f.getName());
+            if (parts == null) {
+                String plain = FolderPaths.withoutTrailingSlash(f.getName());
+                if (!plain.equals(f.getName())) placeFolder(f, f.getParentId(), plain, fs, rs, st);
+                continue;
+            }
+            UUID parent = ensureFolderChain(c.getId(), f.getParentId(), parts.subList(0, parts.size() - 1), fs, st);
+            placeFolder(f, parent, parts.get(parts.size() - 1), fs, rs, st);
+        }
+
+        for (ApiRequest r : rs) {
+            List<String> parts = FolderPaths.split(r.getName());
+            if (parts == null) continue;
+            UUID parent = ensureFolderChain(c.getId(), r.getFolderId(), parts.subList(0, parts.size() - 1), fs, st);
+            r.setFolderId(parent);
+            r.setName(truncate(parts.get(parts.size() - 1), 200));
+            r.setSortOrder((int) rs.stream().filter(x -> Objects.equals(x.getFolderId(), parent)).count());
+            st.requestsMoved++;
+        }
+
+        // Apply moves before any deletes run (folder deletes cascade to whatever is still inside them).
+        folders.saveAll(fs);
+        requests.saveAll(rs);
+        folders.flush();
+        requests.flush();
+
+        OrganizeResult result = new OrganizeResult(st.foldersMoved, st.foldersMerged, st.foldersCreated, st.requestsMoved);
+        if (result.changed()) {
+            collections.saveAndFlush(c); // bump updatedAt
+            activity.log(c.getWorkspaceId(), SecurityUtils.currentUserId(), "organized folders in", "collection", c.getName());
+        }
+        return result;
+    }
+
+    /** Finds or creates the folder chain {@code segments} below {@code parentId}; returns the last folder's id. */
+    private UUID ensureFolderChain(UUID collectionId, UUID parentId, List<String> segments, List<Folder> fs, OrganizeStats st) {
+        UUID cursor = parentId;
+        for (String seg : segments) {
+            final UUID under = cursor;
+            Folder found = fs.stream()
+                    .filter(x -> Objects.equals(x.getParentId(), under) && x.getName().trim().equalsIgnoreCase(seg))
+                    .findFirst().orElse(null);
+            if (found == null) {
+                found = new Folder();
+                found.setCollectionId(collectionId);
+                found.setParentId(under);
+                found.setName(truncate(seg, 150));
+                found.setSortOrder((int) fs.stream().filter(x -> Objects.equals(x.getParentId(), under)).count());
+                found = folders.save(found);
+                fs.add(found);
+                st.foldersCreated++;
+            }
+            cursor = found.getId();
+        }
+        return cursor;
+    }
+
+    /** Moves {@code f} under {@code parentId} as {@code name}, merging into a same-named sibling if one exists. */
+    private void placeFolder(Folder f, UUID parentId, String name, List<Folder> fs, List<ApiRequest> rs, OrganizeStats st) {
+        Folder existing = fs.stream()
+                .filter(x -> x != f && Objects.equals(x.getParentId(), parentId) && x.getName().trim().equalsIgnoreCase(name.trim()))
+                .findFirst().orElse(null);
+        if (existing == null) {
+            if (!Objects.equals(f.getParentId(), parentId)) {
+                f.setSortOrder((int) fs.stream().filter(x -> Objects.equals(x.getParentId(), parentId)).count());
+            }
+            f.setParentId(parentId);
+            f.setName(truncate(name, 150));
+            st.foldersMoved++;
+        } else {
+            mergeFolder(f, existing, fs, rs, st);
+        }
+    }
+
+    /** Moves everything inside {@code source} into {@code target} (recursively merging sub-folders), then deletes it. */
+    private void mergeFolder(Folder source, Folder target, List<Folder> fs, List<ApiRequest> rs, OrganizeStats st) {
+        for (ApiRequest r : rs) {
+            if (Objects.equals(r.getFolderId(), source.getId())) r.setFolderId(target.getId());
+        }
+        for (Folder child : new ArrayList<>(fs)) {
+            if (!Objects.equals(child.getParentId(), source.getId())) continue;
+            Folder dup = fs.stream()
+                    .filter(x -> x != child && Objects.equals(x.getParentId(), target.getId())
+                            && x.getName().trim().equalsIgnoreCase(child.getName().trim()))
+                    .findFirst().orElse(null);
+            if (dup != null) mergeFolder(child, dup, fs, rs, st);
+            else child.setParentId(target.getId());
+        }
+        if ((target.getDescription() == null || target.getDescription().isBlank()) && source.getDescription() != null) {
+            target.setDescription(source.getDescription());
+        }
+        fs.remove(source);
+        // Persist the moves first so the delete's cascade can't take the moved items with it.
+        folders.saveAll(fs);
+        requests.saveAll(rs);
+        folders.flush();
+        requests.flush();
+        folders.delete(source);
+        folders.flush();
+        st.foldersMerged++;
     }
 
     // ---------- Folders ----------

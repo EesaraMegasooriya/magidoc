@@ -9,6 +9,7 @@ import {
   Folder as FolderIcon,
   FolderOpen,
   FolderPlus,
+  FolderTree,
   GitMerge,
   MoreHorizontal,
   Pencil,
@@ -50,6 +51,7 @@ import toast from 'react-hot-toast';
 import { activatable } from '../../lib/a11y';
 import { useWs } from './context';
 import { ImportModal } from './ImportModal';
+import { useOrganize } from './OrganizeFolders';
 
 const DND_TYPE = 'application/x-magidoc-item';
 interface DragItem {
@@ -135,6 +137,7 @@ function CollectionNode({ summary, filter }: { summary: CollectionSummary; filte
   const createRequest = useCreateRequest(wsId);
   const { drop, dragOver, isOver, onDragLeave } = useDropTarget(summary.id, null, detail);
   const [mergeOpen, setMergeOpen] = useState(false);
+  const organize = useOrganize(detail);
 
   const addRequest = async (folderId: string | null) => {
     const name = await prompt({ title: 'New request', label: 'Request name', placeholder: 'e.g. List users', confirmText: 'Create' });
@@ -179,6 +182,7 @@ function CollectionNode({ summary, filter }: { summary: CollectionSummary; filte
           },
           { label: 'Duplicate', icon: <Copy />, onClick: () => dup.mutate(summary.id) },
           { label: 'Merge JSON into…', icon: <GitMerge />, onClick: () => setMergeOpen(true) },
+          { label: 'Organize into folders', icon: <FolderTree />, onClick: () => void organize.run(), disabled: !detail },
           { label: 'Share & publish', icon: <Share2 />, onClick: () => openTab(wsId, { kind: 'collection', id: summary.id, title: summary.name }) },
         ] as (MenuItem | 'divider')[])
       : []),
@@ -230,6 +234,17 @@ function CollectionNode({ summary, filter }: { summary: CollectionSummary; filte
       {expanded && (
         <div className="ml-3 border-l border-line pl-1">
           {isLoading && <div className="py-2 pl-4"><Spinner className="size-4" /></div>}
+          {canEdit && organize.names.length > 0 && (
+            <button
+              type="button"
+              onClick={() => void organize.run()}
+              disabled={organize.pending}
+              className="my-1 ml-1 flex w-[calc(100%-0.5rem)] items-center gap-2 rounded-md border border-info/25 bg-info-soft px-2 py-1.5 text-left text-xs text-info hover:border-info/50 cursor-pointer disabled:opacity-60"
+            >
+              <FolderTree className="size-3.5 shrink-0" />
+              <span className="flex-1">{organize.names.length} items look like “Folder/Name”. Organize into folders</span>
+            </button>
+          )}
           {detail && <TreeNodes nodes={tree} detail={detail} filter={filter} depth={0} onAddRequest={addRequest} onAddFolder={addFolder} />}
           {detail && tree.length === 0 && (
             <p className="py-1.5 pl-5 text-xs text-faint">

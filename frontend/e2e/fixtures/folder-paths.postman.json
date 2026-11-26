@@ -1,0 +1,11 @@
+{
+  "info": { "name": "Bookings API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "item": [
+    { "name": "Health check", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
+    { "name": "External/Get users", "request": { "method": "GET", "url": "{{baseUrl}}/external/users" } },
+    { "name": "External/ Create user", "request": { "method": "POST", "url": "{{baseUrl}}/external/users" } },
+    { "name": "External/Payments/Refund", "request": { "method": "POST", "url": "{{baseUrl}}/external/payments/refund" } },
+    { "name": "Internal/Ping", "request": { "method": "GET", "url": "{{baseUrl}}/internal/ping" } },
+    { "name": "GET /legacy/status", "request": { "method": "GET", "url": "{{baseUrl}}/legacy/status" } }
+  ]
+}

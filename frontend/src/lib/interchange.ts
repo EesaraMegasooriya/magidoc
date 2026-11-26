@@ -462,3 +462,80 @@ function normalizeMethod(m: unknown): HttpMethod {
   const up = String(m ?? 'GET').toUpperCase() as HttpMethod;
   return HTTP_METHODS.includes(up) ? up : 'GET';
 }
+
+// ---------------- Folder paths in names ("External/Get users") ----------------
+
+/** "GET /users", "POST/users": an uppercase HTTP method followed by a space or slash is a URL, not a folder. */
+const METHOD_PREFIX = /^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)[\s/]/;
+
+/**
+ * "External/Get users" → ["External", "Get users"]; "A/B/C" → ["A", "B", "C"].
+ * Returns null for names that aren't folder paths: no slash, URL-like ("GET /users/{id}", "https://…",
+ * "{{baseUrl}}/x", "/health"), or empty segments ("a//b"). A trailing slash is ignored ("External/").
+ */
+export function splitFolderPath(name: string): string[] | null {
+  const n = name.trim().replace(/\/+$/, '');
+  if (!n.includes('/')) return null;
+  if (n.startsWith('/') || /\s\//.test(n) || METHOD_PREFIX.test(n) || /^[a-z][a-z0-9+.-]*:\/\//i.test(n) || n.includes('{{')) return null;
+  const parts = n.split('/').map((p) => p.trim());
+  return parts.some((p) => !p) ? null : parts;
+}
+
+/** Items (at any depth) whose name will be turned into folders, e.g. for a preview. */
+export function findFolderPathNames(items: ExportItem[] | undefined): string[] {
+  const out: string[] = [];
+  for (const i of items ?? []) {
+    if (splitFolderPath(i.name) || (i.type === 'folder' && /\/\s*$/.test(i.name))) out.push(i.name);
+    if (i.type === 'folder') out.push(...findFolderPathNames(i.items));
+  }
+  return out;
+}
+
+const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/**
+ * Moves items named "Folder/Sub/Name" into (nested) folders, creating or reusing folders with the same name
+ * (case-insensitive) at each level. Folders with the same name at the same level are merged. Never mutates input.
+ */
+export function groupByFolderPaths(items: ExportItem[] | undefined): ExportItem[] {
+  const out: ExportItem[] = [];
+
+  const place = (list: ExportItem[], segments: string[], item: ExportItem) => {
+    let target = list;
+    for (const seg of segments) {
+      let folder = target.find((i) => i.type === 'folder' && sameName(i.name, seg));
+      if (!folder) {
+        folder = { type: 'folder', name: seg, description: '', items: [] };
+        target.push(folder);
+      }
+      folder.items ??= [];
+      target = folder.items;
+    }
+    if (item.type !== 'folder') {
+      target.push(item);
+      return;
+    }
+    const existing = target.find((i) => i.type === 'folder' && sameName(i.name, item.name));
+    if (!existing) {
+      target.push(item);
+      return;
+    }
+    // Merge into the existing folder, recursively merging same-named sub-folders.
+    if (!existing.description && item.description) existing.description = item.description;
+    existing.items ??= [];
+    for (const child of item.items ?? []) place(existing.items, [], child);
+  };
+
+  for (const original of items ?? []) {
+    const item: ExportItem =
+      original.type === 'folder' ? { ...original, items: groupByFolderPaths(original.items) } : { ...original };
+    const parts = splitFolderPath(item.name);
+    if (parts) {
+      place(out, parts.slice(0, -1), { ...item, name: parts[parts.length - 1] });
+    } else {
+      const name = item.type === 'folder' ? item.name.trim().replace(/\/+$/, '').trim() || item.name : item.name;
+      place(out, [], { ...item, name });
+    }
+  }
+  return out;
+}

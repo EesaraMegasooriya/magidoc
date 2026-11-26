@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -15,6 +16,10 @@ export default defineConfig({
         },
       },
     },
+  },
+  test: {
+    // Unit tests only; Playwright end-to-end tests in e2e/ run separately (npm run test:e2e).
+    include: ['src/**/*.test.ts'],
   },
   server: {
     port: 5173,

@@ -3,7 +3,7 @@ import { FileJson, GitMerge, Plus, Terminal, Upload, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { useCollections, useImportCollection, useImportMerged, useMergeIntoCollection } from '../../api/hooks';
 import { Badge, Button, Input, Modal, Segmented, Select } from '../../components/ui';
-import { parseCurl, parseImport, type ImportFormat } from '../../lib/interchange';
+import { findFolderPathNames, groupByFolderPaths, parseCurl, parseImport, splitFolderPath, type ImportFormat } from '../../lib/interchange';
 import { uid } from '../../lib/utils';
 import { useWorkspaceStore } from '../../store/workspace';
 import type { ExportCollection, ExportItem } from '../../types';
@@ -49,6 +49,7 @@ export function ImportModal({ onClose, initialCollectionId }: Readonly<{ onClose
   const [destination, setDestination] = useState<'new' | 'existing'>(initialCollectionId ? 'existing' : 'new');
   const [targetId, setTargetId] = useState(initialCollectionId ?? '');
   const [name, setName] = useState('');
+  const [groupPaths, setGroupPaths] = useState(true);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const { data: collections } = useCollections(wsId);
@@ -59,6 +60,9 @@ export function ImportModal({ onClose, initialCollectionId }: Readonly<{ onClose
   const newScratch = useNewScratch();
 
   const valid = sources.filter((s): s is Source & { collection: ExportCollection } => !!s.collection);
+  // Names like "External/Get users" → put into an "External" folder.
+  const pathNames = valid.flatMap((s) => findFolderPathNames(s.collection.items));
+  const pathFolders = [...new Set(pathNames.map((n) => (splitFolderPath(n) ?? [n.trim().replace(/\/+$/, '')])[0]))];
   const defaultName = valid.length ? valid.map((s) => s.collection.name).join(' + ').slice(0, 150) : '';
   const target = collections?.find((c) => c.id === targetId);
   const busy = importOne.isPending || importMerged.isPending || mergeInto.isPending;
@@ -107,7 +111,7 @@ export function ImportModal({ onClose, initialCollectionId }: Readonly<{ onClose
       }
       return;
     }
-    const payload = valid.map((s) => s.collection);
+    const payload = valid.map((s) => (groupPaths && pathNames.length ? { ...s.collection, items: groupByFolderPaths(s.collection.items) } : s.collection));
     if (!payload.length) return;
     if (destination === 'existing') {
       if (!targetId) return;
@@ -244,6 +248,25 @@ export function ImportModal({ onClose, initialCollectionId }: Readonly<{ onClose
                 </li>
               ))}
             </ul>
+          )}
+
+          {pathNames.length > 0 && (
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-line p-3">
+              <input type="checkbox" className="mt-1 accent-accent" checked={groupPaths} onChange={(e) => setGroupPaths(e.target.checked)} />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-medium">Create folders from names like “{pathNames[0]}”</span>
+                <span className="block text-xs text-muted">
+                  {pathNames.length} {pathNames.length === 1 ? 'item uses' : 'items use'} “Folder/Name”. They’ll be placed in{' '}
+                  {pathFolders.slice(0, 5).map((f, i) => (
+                    <span key={f}>
+                      {i > 0 && ', '}
+                      <strong className="font-medium text-fg">{f}</strong>
+                    </span>
+                  ))}
+                  {pathFolders.length > 5 && ` and ${pathFolders.length - 5} more`} (nested paths create sub-folders).
+                </span>
+              </span>
+            </label>
           )}
 
           {valid.length > 0 && (

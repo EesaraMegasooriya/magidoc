@@ -2,6 +2,8 @@ import { Trash2 } from 'lucide-react';
 import { useRef } from 'react';
 import type { KeyValue } from '../types';
 import { uid } from '../lib/utils';
+import type { VarMap } from '../lib/variables';
+import { VariableInput } from './VariableInput';
 
 /**
  * Spreadsheet-like editor. A blank trailing row is always shown; typing into it appends a new row.
@@ -13,6 +15,7 @@ export function KeyValueEditor({
   valuePlaceholder = 'Value',
   readOnly,
   showDescription = true,
+  scope,
 }: {
   rows: KeyValue[];
   onChange: (rows: KeyValue[]) => void;
@@ -20,6 +23,8 @@ export function KeyValueEditor({
   valuePlaceholder?: string;
   readOnly?: boolean;
   showDescription?: boolean;
+  /** When given, {{variables}} in keys and values are coloured by status. */
+  scope?: VarMap;
 }) {
   // The trailing blank row keeps a stable id that becomes the real row's id once the user types,
   // so React keeps the same input mounted and focus is not lost.
@@ -37,8 +42,9 @@ export function KeyValueEditor({
     }
   };
 
-  const cell =
-    'h-8 w-full bg-transparent px-2.5 font-mono text-[12.5px] text-fg placeholder:text-faint focus:outline-none focus:bg-accent-soft';
+  const cellText = 'px-2.5 font-mono text-[12.5px]';
+  const cellBox = 'h-8 w-full bg-transparent text-fg placeholder:text-faint focus:outline-none focus:bg-accent-soft';
+  const cell = `${cellBox} ${cellText}`;
 
   return (
     <div className="overflow-hidden rounded-lg border border-line bg-panel">
@@ -69,20 +75,26 @@ export function KeyValueEditor({
                   )}
                 </td>
                 <td className="border-l border-line">
-                  <input
-                    className={cell}
+                  <VariableInput
+                    scope={scope}
+                    className={cellBox}
+                    textClassName={cellText}
                     value={row.key}
                     placeholder={keyPlaceholder}
                     readOnly={readOnly}
+                    aria-label={keyPlaceholder}
                     onChange={(e) => update(row.id, { key: e.target.value })}
                   />
                 </td>
                 <td className="border-l border-line">
-                  <input
-                    className={cell}
+                  <VariableInput
+                    scope={scope}
+                    className={cellBox}
+                    textClassName={cellText}
                     value={row.value}
                     placeholder={valuePlaceholder}
                     readOnly={readOnly}
+                    aria-label={valuePlaceholder}
                     onChange={(e) => update(row.id, { value: e.target.value })}
                   />
                 </td>

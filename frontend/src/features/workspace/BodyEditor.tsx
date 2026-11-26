@@ -3,6 +3,7 @@ import { Wand2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { KeyValueEditor } from '../../components/KeyValueEditor';
 import { Button } from '../../components/ui';
+import type { VarMap } from '../../lib/variables';
 import type { BodyMode, RequestBody } from '../../types';
 
 const MODES: { value: BodyMode; label: string }[] = [
@@ -53,7 +54,7 @@ export function CodeTextarea({
   );
 }
 
-export function BodyEditor({ body, onChange, readOnly, disabledReason }: { body: RequestBody; onChange: (b: RequestBody) => void; readOnly?: boolean; disabledReason?: string }) {
+export function BodyEditor({ body, onChange, readOnly, disabledReason, scope }: { body: RequestBody; onChange: (b: RequestBody) => void; readOnly?: boolean; disabledReason?: string; scope?: VarMap }) {
   const jsonError = useMemo(() => {
     if (body.mode !== 'json' || !body.raw.trim()) return null;
     // Allow {{variables}} inside JSON by substituting a placeholder before validating.
@@ -98,7 +99,7 @@ export function BodyEditor({ body, onChange, readOnly, disabledReason }: { body:
       {disabledReason && body.mode !== 'none' && <p className="text-xs text-warning">{disabledReason}</p>}
       {body.mode === 'none' && <p className="py-8 text-center text-sm text-faint">This request does not have a body.</p>}
       {(body.mode === 'urlencoded' || body.mode === 'form-data') && (
-        <KeyValueEditor rows={body.fields} readOnly={readOnly} onChange={(fields) => onChange({ ...body, fields })} />
+        <KeyValueEditor rows={body.fields} readOnly={readOnly} scope={scope} onChange={(fields) => onChange({ ...body, fields })} />
       )}
       {['json', 'text', 'xml', 'html'].includes(body.mode) && (
         <>

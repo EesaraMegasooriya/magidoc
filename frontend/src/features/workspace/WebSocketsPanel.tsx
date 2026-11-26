@@ -5,6 +5,7 @@ import { EmptyState, IconButton, Menu, Spinner } from '../../components/ui';
 import { confirm, prompt } from '../../store/confirm';
 import { useWsStore } from '../../store/websocket';
 import { useWorkspaceStore, useWsState } from '../../store/workspace';
+import { activatable } from '../../lib/a11y';
 import { useWs } from './context';
 
 export function WebSocketsPanel() {
@@ -57,6 +58,7 @@ export function WebSocketsPanel() {
             <div
               key={w.id}
               onClick={() => openTab(wsId, { kind: 'websocket', id: w.id, title: w.name })}
+              {...activatable(() => openTab(wsId, { kind: 'websocket', id: w.id, title: w.name }), `WebSocket ${w.name}`)}
               className={clsx(
                 'group flex h-8 cursor-pointer items-center gap-2 rounded-md px-2 text-[13px] transition-colors hover:bg-panel-3',
                 active === `websocket:${w.id}` ? 'bg-accent-soft text-fg' : 'text-muted hover:text-fg',
@@ -94,7 +96,7 @@ export function WebSocketsPanel() {
                     },
                   ]}
                   trigger={(open) => (
-                    <button type="button" onClick={open} className="hidden rounded p-0.5 text-muted hover:text-fg group-hover:block cursor-pointer" aria-label="Connection actions">
+                    <button type="button" onClick={open} className="rounded p-0.5 text-muted opacity-0 transition-opacity hover:text-fg group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 cursor-pointer" aria-label="Connection actions">
                       <MoreHorizontal className="size-3.5" />
                     </button>
                   )}

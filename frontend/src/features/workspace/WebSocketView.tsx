@@ -18,7 +18,9 @@ import { useUpdateWebSocket, useWebSockets } from '../../api/hooks';
 import { CodeView, CopyButton, tryPrettyJson } from '../../components/CodeView';
 import { Button, EmptyState, FullPageSpinner, IconButton, Input, SearchInput, Segmented } from '../../components/ui';
 import { formatBytes, uid } from '../../lib/utils';
-import { resolve, unresolved } from '../../lib/variables';
+import { collectVariables, resolve } from '../../lib/variables';
+import { VariableChips } from '../../components/VariableChips';
+import { VariableInput } from '../../components/VariableInput';
 import { prompt } from '../../store/confirm';
 import { useWorkspaceStore, type Tab } from '../../store/workspace';
 import { useWsComposer, useWsConn, useWsStore, type WsDraft, type WsLogEntry, type WsStatus } from '../../store/websocket';
@@ -70,7 +72,7 @@ function WebSocketEditor({ conn, tabKey }: Readonly<{ conn: WebSocketConnection;
 
   const edit = (patch: Partial<WsDraft>) => setDraft(id, { ...draft, ...patch });
   const resolvedUrl = resolve(draft.url.trim(), scope);
-  const missing = [...new Set([...unresolved(draft.url, scope), ...unresolved(composer.body, scope)])];
+  const usedVars = collectVariables([draft.url, composer.body], scope);
   const urlError = draft.url.trim() && !/^wss?:\/\//i.test(resolvedUrl) ? 'WebSocket URLs start with ws:// or wss://' : null;
   const insecureFromHttps = window.location.protocol === 'https:' && /^ws:\/\//i.test(resolvedUrl);
   const isLive = state.status === 'open' || state.status === 'connecting' || state.status === 'closing';
@@ -168,7 +170,8 @@ function WebSocketEditor({ conn, tabKey }: Readonly<{ conn: WebSocketConnection;
             <span className={clsx('size-2 shrink-0 rounded-full', status.dot)} />
             {status.label}
           </span>
-          <input
+          <VariableInput
+            scope={scope}
             value={draft.url}
             onChange={(e) => edit({ url: e.target.value })}
             onKeyDown={(e) => {
@@ -176,7 +179,9 @@ function WebSocketEditor({ conn, tabKey }: Readonly<{ conn: WebSocketConnection;
             }}
             placeholder="wss://echo.websocket.org  —  supports {{variables}}"
             spellCheck={false}
-            className="h-10 min-w-0 flex-1 bg-transparent px-3 font-mono text-[13px] text-fg placeholder:text-faint focus:outline-none"
+            wrapperClassName="flex-1"
+            className="h-10 bg-transparent text-fg placeholder:text-faint focus:outline-none"
+            textClassName="px-3 font-mono text-[13px]"
             aria-label="WebSocket URL"
             aria-invalid={!!urlError}
           />
@@ -212,9 +217,9 @@ function WebSocketEditor({ conn, tabKey }: Readonly<{ conn: WebSocketConnection;
             />
           </label>
           {resolvedUrl !== draft.url.trim() && !urlError && <span className="truncate font-mono text-[11px] text-faint">→ {resolvedUrl}</span>}
-          {missing.map((v) => (
-            <span key={v} className="rounded bg-danger-soft px-1.5 py-0.5 font-mono text-[11px] text-danger">{`{{${v}}}`} undefined</span>
-          ))}
+          <span className="text-[11px]">
+            <VariableChips vars={usedVars} />
+          </span>
         </div>
         {urlError && <p className="mt-1.5 text-xs text-danger">{urlError}</p>}
         {insecureFromHttps && <p className="mt-1.5 text-xs text-warning">Browsers block insecure ws:// connections from an https:// page — use wss://.</p>}

@@ -11,7 +11,9 @@ import { errorMessage } from '../../lib/api';
 import { buildRequest, effectiveAuth, paramsFromUrl, sameDraft, urlFromParams } from '../../lib/request';
 import { folderPath } from '../../lib/tree';
 import { METHOD_COLORS, uid } from '../../lib/utils';
-import { unresolved } from '../../lib/variables';
+import { collectVariables } from '../../lib/variables';
+import { VariableChips } from '../../components/VariableChips';
+import { VariableInput } from '../../components/VariableInput';
 import { prompt } from '../../store/confirm';
 import { useWorkspaceStore } from '../../store/workspace';
 import { HTTP_METHODS, type ApiRequest, type CollectionDetail, type HttpMethod, type RequestDraft } from '../../types';
@@ -68,19 +70,21 @@ export function RequestEditor({
   const runnerMode = useRunner((s) => s.mode);
   const openSetup = useRunner((s) => s.openSetup);
   const sendsLocally = !!built.url && (runnerMode === 'agent' || (runnerMode === 'auto' && isLocalTarget(built.url)));
-  const missing = useMemo(() => {
+  /** Every variable the request will actually send (mirrors buildRequest: no body on GET/HEAD). */
+  const usedVars = useMemo(() => {
     const auth = effectiveAuth(draft, detail?.collection.auth);
+    const sendsBody = draft.method !== 'GET' && draft.method !== 'HEAD' && draft.body.mode !== 'none';
+    const fieldBody = draft.body.mode === 'form-data' || draft.body.mode === 'urlencoded';
     const texts = [
       draft.url,
       ...draft.headers.filter((h) => h.enabled).flatMap((h) => [h.key, h.value]),
-      draft.body.mode !== 'none' ? draft.body.raw : '',
-      ...draft.body.fields.filter((f) => f.enabled).map((f) => f.value),
-      auth.token ?? '',
-      auth.username ?? '',
-      auth.password ?? '',
-      auth.value ?? '',
+      ...(sendsBody && !fieldBody ? [draft.body.raw] : []),
+      ...(sendsBody && fieldBody ? draft.body.fields.filter((f) => f.enabled).flatMap((f) => [f.key, f.value]) : []),
+      ...(auth.type === 'bearer' ? [auth.token ?? ''] : []),
+      ...(auth.type === 'basic' ? [auth.username ?? '', auth.password ?? ''] : []),
+      ...(auth.type === 'apikey' ? [auth.key ?? '', auth.value ?? ''] : []),
     ];
-    return [...new Set(texts.flatMap((t) => unresolved(t, scope)))];
+    return collectVariables(texts, scope);
   }, [draft, scope, detail]);
 
   const send = useCallback(async () => {
@@ -207,13 +211,16 @@ export function RequestEditor({
                   </option>
                 ))}
               </select>
-              <input
+              <VariableInput
+                scope={scope}
                 value={draft.url}
                 readOnly={readOnly}
                 onChange={(e) => update({ url: e.target.value, queryParams: paramsFromUrl(e.target.value, draft.queryParams) })}
                 placeholder="https://api.example.com/v1/users  —  use {{variables}}"
                 spellCheck={false}
-                className="h-10 min-w-0 flex-1 bg-transparent px-3 font-mono text-[13px] text-fg placeholder:text-faint focus:outline-none"
+                wrapperClassName="flex-1"
+                className="h-10 bg-transparent text-fg placeholder:text-faint focus:outline-none"
+                textClassName="px-3 font-mono text-[13px]"
                 aria-label="Request URL"
               />
               <button
@@ -238,11 +245,7 @@ export function RequestEditor({
                   <Laptop className="size-3" /> sent from your computer
                 </button>
               )}
-              {missing.map((v) => (
-                <span key={v} className="rounded bg-danger-soft px-1.5 py-0.5 font-mono text-danger" title="Not defined in globals, collection or active environment">
-                  {`{{${v}}}`} undefined
-                </span>
-              ))}
+              <VariableChips vars={usedVars} />
             </div>
           </div>
 
@@ -265,19 +268,21 @@ export function RequestEditor({
               <KeyValueEditor
                 rows={draft.queryParams}
                 readOnly={readOnly}
+                scope={scope}
                 onChange={(queryParams) => update({ queryParams, url: urlFromParams(draft.url, queryParams) })}
               />
             )}
-            {section === 'headers' && <KeyValueEditor rows={draft.headers} readOnly={readOnly} onChange={(headers) => update({ headers })} />}
+            {section === 'headers' && <KeyValueEditor rows={draft.headers} readOnly={readOnly} scope={scope} onChange={(headers) => update({ headers })} />}
             {section === 'body' && (
               <BodyEditor
                 body={draft.body}
                 readOnly={readOnly}
+                scope={scope}
                 onChange={(body) => update({ body })}
                 disabledReason={draft.method === 'GET' || draft.method === 'HEAD' ? `${draft.method} requests are sent without a body.` : undefined}
               />
             )}
-            {section === 'auth' && <AuthEditor value={draft.auth} readOnly={readOnly} inherited={detail?.collection.auth} onChange={(auth) => update({ auth })} />}
+            {section === 'auth' && <AuthEditor value={draft.auth} readOnly={readOnly} scope={scope} inherited={detail?.collection.auth} onChange={(auth) => update({ auth })} />}
             {section === 'docs' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">

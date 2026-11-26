@@ -47,6 +47,7 @@ import { confirm, prompt } from '../../store/confirm';
 import { useWorkspaceStore, useWsState } from '../../store/workspace';
 import type { CollectionDetail, CollectionSummary } from '../../types';
 import toast from 'react-hot-toast';
+import { activatable } from '../../lib/a11y';
 import { useWs } from './context';
 import { ImportModal } from './ImportModal';
 
@@ -210,6 +211,7 @@ function CollectionNode({ summary, filter }: { summary: CollectionSummary; filte
         onDrop={drop}
         className={clsx('group flex h-8 cursor-pointer items-center gap-1 rounded-md pl-1 pr-1 text-sm hover:bg-panel-3', isOver && 'bg-accent-soft outline-1 outline-dashed outline-accent')}
         onClick={() => setOpen(!open)}
+        {...activatable(() => setOpen(!open), summary.name)}
       >
         <ChevronRight className={clsx('size-3.5 shrink-0 text-faint transition', expanded && 'rotate-90')} />
         <Box className="size-3.5 shrink-0 text-accent-fg" />
@@ -219,7 +221,7 @@ function CollectionNode({ summary, filter }: { summary: CollectionSummary; filte
           align="right"
           items={items}
           trigger={(openMenu) => (
-            <button onClick={openMenu} className="hidden rounded p-0.5 text-muted hover:text-fg group-hover:block cursor-pointer" aria-label="Collection actions">
+            <button onClick={openMenu} className="rounded p-0.5 text-muted opacity-0 transition-opacity hover:text-fg group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 cursor-pointer" aria-label="Collection actions">
               <MoreHorizontal className="size-4" />
             </button>
           )}
@@ -311,6 +313,7 @@ function FolderNode({ node, ...props }: { node: Extract<TreeNode, { type: 'folde
         onDragLeave={onDragLeave}
         onDrop={drop}
         onClick={() => setOpen(!open)}
+        {...activatable(() => setOpen(!open), `Folder ${f.name}`)}
         className={clsx('group flex h-7 cursor-pointer items-center gap-1 rounded-md pl-1 pr-1 text-[13px] text-muted hover:bg-panel-3 hover:text-fg', isOver && 'bg-accent-soft outline-1 outline-dashed outline-accent')}
       >
         <ChevronRight className={clsx('size-3 shrink-0 text-faint transition', expanded && 'rotate-90')} />
@@ -321,7 +324,7 @@ function FolderNode({ node, ...props }: { node: Extract<TreeNode, { type: 'folde
             align="right"
             items={items}
             trigger={(openMenu) => (
-              <button onClick={openMenu} className="hidden rounded p-0.5 text-muted hover:text-fg group-hover:block cursor-pointer" aria-label="Folder actions">
+              <button onClick={openMenu} className="rounded p-0.5 text-muted opacity-0 transition-opacity hover:text-fg group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 cursor-pointer" aria-label="Folder actions">
                 <MoreHorizontal className="size-3.5" />
               </button>
             )}
@@ -391,6 +394,7 @@ function RequestNode({ node, detail }: { node: Extract<TreeNode, { type: 'reques
       draggable={canEdit}
       onDragStart={(e) => startDrag(e, { kind: 'request', id: r.id, collectionId: r.collectionId })}
       onClick={open}
+      {...activatable(open, `${r.method} ${r.name}`)}
       className={clsx(
         'group flex h-7 cursor-pointer items-center gap-2 rounded-md pl-5 pr-1 text-[13px] transition',
         isActive ? 'bg-accent-soft text-fg' : isOpen ? 'text-fg hover:bg-panel-3' : 'text-muted hover:bg-panel-3 hover:text-fg',
@@ -402,7 +406,7 @@ function RequestNode({ node, detail }: { node: Extract<TreeNode, { type: 'reques
         align="right"
         items={items}
         trigger={(openMenu) => (
-          <button onClick={openMenu} className="hidden rounded p-0.5 text-muted hover:text-fg group-hover:block cursor-pointer" aria-label="Request actions">
+          <button onClick={openMenu} className="rounded p-0.5 text-muted opacity-0 transition-opacity hover:text-fg group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 cursor-pointer" aria-label="Request actions">
             <MoreHorizontal className="size-3.5" />
           </button>
         )}

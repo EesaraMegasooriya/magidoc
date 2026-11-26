@@ -1,5 +1,7 @@
 import { Info } from 'lucide-react';
-import { Field, Input, Select } from '../../components/ui';
+import { Field, INPUT_CLASS, Input, Select } from '../../components/ui';
+import { VariableInput } from '../../components/VariableInput';
+import type { VarMap } from '../../lib/variables';
 import type { AuthConfig, AuthType } from '../../types';
 
 const LABELS: Record<AuthType, string> = {
@@ -16,12 +18,15 @@ export function AuthEditor({
   allowInherit = true,
   inherited,
   readOnly,
+  scope,
 }: {
   value: AuthConfig;
   onChange: (v: AuthConfig) => void;
   allowInherit?: boolean;
   inherited?: AuthConfig;
   readOnly?: boolean;
+  /** When given, {{variables}} are coloured by status (not in the password field, which must stay hidden). */
+  scope?: VarMap;
 }) {
   const types: AuthType[] = allowInherit ? ['inherit', 'none', 'bearer', 'basic', 'apikey'] : ['none', 'bearer', 'basic', 'apikey'];
   const set = (patch: Partial<AuthConfig>) => onChange({ ...value, ...patch });
@@ -51,13 +56,13 @@ export function AuthEditor({
         {value.type === 'none' && <Note>This request does not use any authorization.</Note>}
         {value.type === 'bearer' && (
           <Field label="Token">
-            <Input className="font-mono" readOnly={readOnly} value={value.token ?? ''} placeholder="{{accessToken}}" onChange={(e) => set({ token: e.target.value })} />
+            <VariableInput scope={scope} className={INPUT_CLASS} textClassName="px-3 font-mono text-[13px]" mirrorClassName="inset-px" readOnly={readOnly} value={value.token ?? ''} placeholder="{{accessToken}}" onChange={(e) => set({ token: e.target.value })} />
           </Field>
         )}
         {value.type === 'basic' && (
           <>
             <Field label="Username">
-              <Input className="font-mono" readOnly={readOnly} value={value.username ?? ''} onChange={(e) => set({ username: e.target.value })} />
+              <VariableInput scope={scope} className={INPUT_CLASS} textClassName="px-3 font-mono text-[13px]" mirrorClassName="inset-px" readOnly={readOnly} value={value.username ?? ''} onChange={(e) => set({ username: e.target.value })} />
             </Field>
             <Field label="Password">
               <Input className="font-mono" type="password" readOnly={readOnly} value={value.password ?? ''} onChange={(e) => set({ password: e.target.value })} autoComplete="off" />
@@ -67,10 +72,10 @@ export function AuthEditor({
         {value.type === 'apikey' && (
           <>
             <Field label="Key">
-              <Input className="font-mono" readOnly={readOnly} value={value.key ?? ''} placeholder="X-API-Key" onChange={(e) => set({ key: e.target.value })} />
+              <VariableInput scope={scope} className={INPUT_CLASS} textClassName="px-3 font-mono text-[13px]" mirrorClassName="inset-px" readOnly={readOnly} value={value.key ?? ''} placeholder="X-API-Key" onChange={(e) => set({ key: e.target.value })} />
             </Field>
             <Field label="Value">
-              <Input className="font-mono" readOnly={readOnly} value={value.value ?? ''} placeholder="{{apiKey}}" onChange={(e) => set({ value: e.target.value })} />
+              <VariableInput scope={scope} className={INPUT_CLASS} textClassName="px-3 font-mono text-[13px]" mirrorClassName="inset-px" readOnly={readOnly} value={value.value ?? ''} placeholder="{{apiKey}}" onChange={(e) => set({ value: e.target.value })} />
             </Field>
             <Field label="Add to">
               <Select disabled={readOnly} value={value.in ?? 'header'} onChange={(e) => set({ in: e.target.value as 'header' | 'query' })}>

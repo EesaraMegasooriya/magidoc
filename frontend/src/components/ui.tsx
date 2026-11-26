@@ -90,6 +90,9 @@ const fieldCls =
   'hover:border-faint/60 focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15 ' +
   'read-only:bg-panel-2 read-only:hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-60';
 
+/** Classes of the standard text field, for custom inputs that must look identical. */
+export const INPUT_CLASS = `${fieldCls} h-8.5`;
+
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...rest} className={clsx(fieldCls, 'h-8.5', className)} />;
 }

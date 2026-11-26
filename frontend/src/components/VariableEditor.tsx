@@ -3,6 +3,14 @@ import { Eye, EyeOff, Lock, LockOpen, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { Variable } from '../types';
 import { uid } from '../lib/utils';
+import { variableRowStatus, type RowStatus } from '../lib/variables';
+
+const STATUS_DOT: Record<RowStatus['level'], string> = {
+  ok: 'bg-success',
+  warn: 'bg-warning',
+  error: 'bg-danger',
+  off: 'bg-faint',
+};
 
 export function VariableEditor({
   rows,
@@ -42,6 +50,7 @@ export function VariableEditor({
         <tbody>
           {display.map((row) => {
             const isNew = !readOnly && row.id === pendingId.current;
+            const status = isNew ? null : variableRowStatus(row, rows);
             const hidden = row.secret && !revealed[row.id];
             return (
               <tr key={row.id} className="group border-t border-line">
@@ -56,8 +65,27 @@ export function VariableEditor({
                     />
                   )}
                 </td>
-                <td className="border-l border-line">
-                  <input className={cell} value={row.key} placeholder="Add variable" readOnly={readOnly} onChange={(e) => update(row.id, { key: e.target.value })} />
+                <td className="relative border-l border-line">
+                  <input
+                    className={clsx(cell, 'pr-7', status?.level === 'error' && 'text-danger')}
+                    value={row.key}
+                    placeholder="Add variable"
+                    readOnly={readOnly}
+                    aria-label="Variable name"
+                    aria-invalid={status?.level === 'error' || undefined}
+                    aria-describedby={status ? `${row.id}-status` : undefined}
+                    onChange={(e) => update(row.id, { key: e.target.value })}
+                  />
+                  {status && (
+                    <span
+                      className="absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center"
+                      title={status.message}
+                      data-var-row-status={status.level}
+                    >
+                      <span className={clsx('size-2 rounded-full', STATUS_DOT[status.level])} aria-hidden="true" />
+                      <span id={`${row.id}-status`} className="sr-only">{status.message}</span>
+                    </span>
+                  )}
                 </td>
                 <td className="border-l border-line">
                   <input

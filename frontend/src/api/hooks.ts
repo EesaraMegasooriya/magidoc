@@ -15,6 +15,7 @@ import type {
   ExportCollection,
   Folder,
   HistoryItem,
+  IntegrationStatus,
   JoinCode,
   MergeResult,
   MembersResponse,
@@ -398,6 +399,37 @@ export const useSaveRequest = (wsId: string) => {
       qc.invalidateQueries({ queryKey: keys.activity(wsId) });
     },
     onError: (e) => toast.error(errorMessage(e)),
+  });
+};
+
+/**
+ * Marks a request's integration status. Optimistic: the tag changes instantly and rolls back if the server refuses.
+ * Uses its own endpoint, so it never touches (or saves) unsaved edits in an open request tab.
+ */
+export const useSetIntegrationStatus = (wsId: string) => {
+  const qc = useQueryClient();
+  type Vars = { id: string; collectionId: string; status: IntegrationStatus | null };
+  const patch = (v: Vars, fn: (r: ApiRequest) => ApiRequest) =>
+    qc.setQueryData<CollectionDetail>(keys.collection(v.collectionId), (old) =>
+      old ? { ...old, requests: old.requests.map((r) => (r.id === v.id ? fn(r) : r)) } : old,
+    );
+  return useMutation({
+    mutationFn: (v: Vars) =>
+      api.put<ApiRequest>(`/requests/${v.id}/integration-status`, { status: v.status }).then((r) => normalizeRequest(r.data)),
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: keys.collection(v.collectionId) });
+      const previous = qc.getQueryData<CollectionDetail>(keys.collection(v.collectionId))?.requests.find((r) => r.id === v.id)?.integrationStatus ?? null;
+      patch(v, (r) => ({ ...r, integrationStatus: v.status }));
+      return { previous };
+    },
+    onError: (e, v, ctx) => {
+      if (ctx) patch(v, (r) => ({ ...r, integrationStatus: ctx.previous }));
+      toast.error(errorMessage(e));
+    },
+    onSuccess: (saved, v) => {
+      patch(v, (r) => ({ ...r, integrationStatus: saved.integrationStatus ?? null }));
+      qc.invalidateQueries({ queryKey: keys.activity(wsId) });
+    },
   });
 };
 

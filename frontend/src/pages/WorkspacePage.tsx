@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useCollections, useWorkspace, useWorkspaces } from '../api/hooks';
 import { AppHeader } from '../components/AppHeader';
 import { LogoMark } from '../components/Logo';
+import { SidebarResizer, useSidebarWidth } from '../components/SidebarResizer';
 import { Button, EmptyState, FullPageSpinner, Kbd, Menu, RoleBadge, Skeleton } from '../components/ui';
 import { CollectionsPanel } from '../features/workspace/CollectionsPanel';
 import { CollectionView } from '../features/workspace/CollectionView';
@@ -118,6 +119,7 @@ function WorkspaceLayout() {
   const [panel, setPanel] = useState<Panel>('collections');
   const [sidebarOpen, setSidebarOpen] = useState(readSidebarPref);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useSidebarWidth();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const openTab = useWorkspaceStore((s) => s.openTab);
@@ -239,7 +241,12 @@ function WorkspaceLayout() {
         </nav>
 
         {/* Desktop sidebar */}
-        {sidebarOpen && <aside className="hidden w-[280px] shrink-0 border-r border-line bg-panel md:block">{panelContent}</aside>}
+        {sidebarOpen && (
+          <aside className="relative hidden shrink-0 border-r border-line bg-panel md:block" style={{ width: sidebarWidth }}>
+            {panelContent}
+            <SidebarResizer width={sidebarWidth} onChange={setSidebarWidth} />
+          </aside>
+        )}
 
         {/* Mobile drawer */}
         {mobileOpen && (

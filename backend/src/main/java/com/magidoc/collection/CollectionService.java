@@ -151,12 +151,13 @@ public class CollectionService {
         List<ExportItem> items = new ArrayList<>();
         for (Folder f : foldersByParent.getOrDefault(parentId, List.of())) {
             items.add(new ExportItem("folder", f.getName(), f.getDescription(), null, null, null, null, null, null,
-                    null, exportItems(f.getId(), foldersByParent, requestsByFolder)));
+                    null, exportItems(f.getId(), foldersByParent, requestsByFolder), null));
         }
         for (ApiRequest r : requestsByFolder.getOrDefault(parentId, List.of())) {
             var dto = mapper.toDto(r);
             items.add(new ExportItem("request", r.getName(), r.getDescription(), r.getMethod(), r.getUrl(),
-                    dto.headers(), dto.queryParams(), dto.body(), dto.auth(), dto.examples(), null));
+                    dto.headers(), dto.queryParams(), dto.body(), dto.auth(), dto.examples(), null,
+                    r.getIntegrationStatus() == null ? null : r.getIntegrationStatus().name()));
         }
         return items;
     }
@@ -210,6 +211,7 @@ public class CollectionService {
         r.setBody(item.body() != null && item.body().isObject() ? json.write(item.body()) : null);
         r.setAuth(item.auth() != null && item.auth().isObject() ? json.write(item.auth()) : null);
         r.setExamples(arrayOrNull(item.examples()));
+        r.setIntegrationStatus(IntegrationStatus.parseOrNull(item.integrationStatus()));
         r.setSortOrder(order);
         return r;
     }
@@ -340,6 +342,8 @@ public class CollectionService {
         if (item.queryParams() != null && item.queryParams().isArray()) r.setQueryParams(json.write(item.queryParams()));
         if (item.body() != null && item.body().isObject()) r.setBody(json.write(item.body()));
         if (item.auth() != null && item.auth().isObject()) r.setAuth(json.write(item.auth()));
+        IntegrationStatus status = IntegrationStatus.parseOrNull(item.integrationStatus());
+        if (status != null) r.setIntegrationStatus(status);
         if (item.examples() != null && item.examples().isArray() && !item.examples().isEmpty()) {
             ArrayNode merged = json.array();
             Set<String> incomingNames = new HashSet<>();

@@ -263,6 +263,65 @@ class MagiDocIntegrationTest {
                 + again.get("foldersCreated").asInt() + again.get("requestsMoved").asInt()).isZero();
     }
 
+    @Test
+    void integrationStatusIsMarkedSeparatelyAndKeptPrivate() throws Exception {
+        String token = register("Ivy", "ivy-" + UUID.randomUUID().toString().substring(0, 8) + "@example.com");
+        String wsId = call(post("/api/workspaces"), token, "{\"name\":\"Status\"}", 201).get("id").asText();
+        String col = """
+                {"magidoc":"1.0","name":"Shop","items":[
+                  {"type":"request","name":"List orders","method":"GET","url":"/orders","integrationStatus":"integrated"},
+                  {"type":"request","name":"Create order","method":"POST","url":"/orders","integrationStatus":"bogus"},
+                  {"type":"request","name":"Refund","method":"POST","url":"/refunds"}
+                ]}
+                """;
+        String colId = call(post("/api/workspaces/" + wsId + "/collections/import"), token, col, 201).get("id").asText();
+        JsonNode detail = call(get("/api/collections/" + colId), token, null, 200);
+        String listId = idOf(detail.get("requests"), "List orders");
+        String createId = idOf(detail.get("requests"), "Create order");
+        // Imported statuses are parsed leniently; unknown ones are dropped rather than failing the import
+        assertThat(statusOf(detail, "List orders")).isEqualTo("INTEGRATED");
+        assertThat(statusOf(detail, "Create order")).isNull();
+        assertThat(statusOf(detail, "Refund")).isNull();
+
+        JsonNode marked = call(put("/api/requests/" + createId + "/integration-status"), token, "{\"status\":\"IN_PROGRESS\"}", 200);
+        assertThat(marked.get("integrationStatus").asText()).isEqualTo("IN_PROGRESS");
+        call(put("/api/requests/" + createId + "/integration-status"), token, "{\"status\":\"DONE\"}", 400);
+
+        // A normal save (which never sends the status) leaves it alone
+        call(put("/api/requests/" + createId), token, "{\"name\":\"Create order v2\"}", 200);
+        assertThat(call(get("/api/requests/" + createId), token, null, 200).get("integrationStatus").asText()).isEqualTo("IN_PROGRESS");
+
+        // null clears it
+        assertThat(call(put("/api/requests/" + listId + "/integration-status"), token, "{\"status\":null}", 200)
+                .get("integrationStatus").isNull()).isTrue();
+
+        // Survives export → duplicate, and is never exposed in public docs
+        JsonNode exported = call(get("/api/collections/" + colId + "/export"), token, null, 200);
+        assertThat(exported.toString()).contains("\"integrationStatus\":\"IN_PROGRESS\"");
+        String copyId = call(post("/api/collections/" + colId + "/duplicate"), token, null, 201).get("id").asText();
+        assertThat(statusOf(call(get("/api/collections/" + copyId), token, null, 200), "Create order v2")).isEqualTo("IN_PROGRESS");
+        JsonNode share = call(post("/api/collections/" + colId + "/shares"), token, "{}", 201);
+        JsonNode docs = call(get("/api/public/docs/" + share.get("token").asText()), null, null, 200);
+        assertThat(docs.toString()).doesNotContain("IN_PROGRESS");
+
+        // Viewers can see statuses but not change them
+        String code = call(post("/api/workspaces/" + wsId + "/join-code"), token, "{\"role\":\"VIEWER\"}", 200).get("code").asText();
+        String viewer = register("Vic", "vic-" + UUID.randomUUID().toString().substring(0, 8) + "@example.com");
+        call(post("/api/workspaces/join"), viewer, "{\"code\":\"" + code + "\"}", 200);
+        assertThat(statusOf(call(get("/api/collections/" + colId), viewer, null, 200), "Create order v2")).isEqualTo("IN_PROGRESS");
+        call(put("/api/requests/" + createId + "/integration-status"), viewer, "{\"status\":\"INTEGRATED\"}", 403);
+    }
+
+    private static String statusOf(JsonNode detail, String name) {
+        for (JsonNode r : detail.get("requests")) {
+            if (r.get("name").asText().equals(name)) {
+                JsonNode s = r.get("integrationStatus");
+                return s == null || s.isNull() ? null : s.asText();
+            }
+        }
+        throw new AssertionError("no request " + name);
+    }
+
     private static String idOf(JsonNode requests, String name) {
         for (JsonNode r : requests) if (r.get("name").asText().equals(name)) return r.get("id").asText();
         throw new AssertionError("no request " + name);

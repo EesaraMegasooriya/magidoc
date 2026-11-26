@@ -28,7 +28,8 @@ public class CollectionMapper {
         return new RequestDto(r.getId(), r.getCollectionId(), r.getFolderId(), r.getName(), r.getMethod(), r.getUrl(),
                 nz(r.getDescription()), json.readArray(r.getHeaders()), json.readArray(r.getQueryParams()),
                 json.read(r.getBody(), defaultBody()), json.read(r.getAuth(), defaultRequestAuth()),
-                json.readArray(r.getExamples()), r.getSortOrder(), r.getUpdatedAt());
+                json.readArray(r.getExamples()), r.getSortOrder(), r.getUpdatedAt(),
+                r.getIntegrationStatus());
     }
 
     public com.fasterxml.jackson.databind.node.ObjectNode defaultBody() {

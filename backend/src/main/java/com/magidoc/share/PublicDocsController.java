@@ -55,7 +55,7 @@ public class PublicDocsController {
                 maskVariables(col.variables()), sanitizeAuth(col.auth()), col.createdAt(), col.updatedAt());
         List<RequestDto> safeRequests = raw.requests().stream().map(r -> new RequestDto(r.id(), r.collectionId(),
                 r.folderId(), r.name(), r.method(), r.url(), r.description(), maskHeaders(r.headers()),
-                r.queryParams(), r.body(), sanitizeAuth(r.auth()), r.examples(), r.sortOrder(), r.updatedAt()))
+                r.queryParams(), r.body(), sanitizeAuth(r.auth()), r.examples(), r.sortOrder(), r.updatedAt(), null))
                 .toList();
 
         String wsName = workspaces.findById(c.getWorkspaceId()).map(Workspace::getName).orElse("");

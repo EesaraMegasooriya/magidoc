@@ -3,6 +3,8 @@ package com.magidoc.collection;
 import com.magidoc.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -48,4 +50,9 @@ public class ApiRequest extends BaseEntity {
 
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
+
+    /** Null means "not marked". */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "integration_status", length = 20)
+    private IntegrationStatus integrationStatus;
 }

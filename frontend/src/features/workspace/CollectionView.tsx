@@ -28,6 +28,7 @@ import { AuthEditor } from './AuthEditor';
 import { CodeTextarea } from './BodyEditor';
 import { useScope, useWs } from './context';
 import { OrganizeBanner } from './OrganizeFolders';
+import { IntegrationProgress } from './IntegrationStatus';
 
 type Section = 'overview' | 'variables' | 'auth' | 'runner' | 'share';
 
@@ -126,6 +127,7 @@ function OverviewSection({ detail }: { detail: CollectionDetail }) {
   const dirty = value !== detail.collection.description;
   return (
     <div>
+      <IntegrationProgress requests={detail.requests} />
       <div className="mb-3 flex items-center justify-between">
         <h3 className="font-semibold">Documentation</h3>
         {canEdit && (

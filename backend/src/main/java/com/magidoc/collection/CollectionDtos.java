@@ -30,7 +30,8 @@ public final class CollectionDtos {
 
     public record RequestDto(UUID id, UUID collectionId, UUID folderId, String name, String method, String url,
                              String description, JsonNode headers, JsonNode queryParams, JsonNode body,
-                             JsonNode auth, JsonNode examples, int sortOrder, Instant updatedAt) {
+                             JsonNode auth, JsonNode examples, int sortOrder, Instant updatedAt,
+                             IntegrationStatus integrationStatus) {
     }
 
     public record CollectionDetail(CollectionDto collection, List<FolderDto> folders, List<RequestDto> requests) {
@@ -65,6 +66,10 @@ public final class CollectionDtos {
     public record MoveApiRequest(UUID folderId, Integer sortOrder) {
     }
 
+    /** status: NOT_STARTED, IN_PROGRESS, INTEGRATED, or null to clear. */
+    public record SetIntegrationStatus(String status) {
+    }
+
     /** One or more collections to import as a single collection, or to merge into an existing one. */
     public record MergeRequest(@NotEmpty @Size(max = 20) @Valid List<ExportCollection> collections,
                                @Size(max = 150) String name) {
@@ -89,6 +94,6 @@ public final class CollectionDtos {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record ExportItem(String type, String name, String description, String method, String url,
                              JsonNode headers, JsonNode queryParams, JsonNode body, JsonNode auth,
-                             JsonNode examples, List<ExportItem> items) {
+                             JsonNode examples, List<ExportItem> items, String integrationStatus) {
     }
 }

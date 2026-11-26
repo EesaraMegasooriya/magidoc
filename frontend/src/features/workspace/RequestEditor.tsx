@@ -21,6 +21,7 @@ import { AuthEditor } from './AuthEditor';
 import { BodyEditor, CodeTextarea } from './BodyEditor';
 import { ResponsePanel } from './ResponsePanel';
 import { SnippetModal } from './SnippetModal';
+import { StatusPicker } from './IntegrationStatus';
 import { useScope, useWs } from './context';
 
 type Section = 'params' | 'headers' | 'body' | 'auth' | 'docs';
@@ -183,6 +184,7 @@ export function RequestEditor({
             aria-label="Request name"
           />
         </div>
+        {request && <StatusPicker request={request} canEdit={canEdit} variant="pill" />}
         <Button size="sm" variant="ghost" icon={<Code2 className="size-3.5" />} onClick={() => setSnippetOpen(true)}>
           Code
         </Button>

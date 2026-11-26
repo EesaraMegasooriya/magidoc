@@ -11,6 +11,7 @@ import {
   FolderPlus,
   FolderTree,
   GitMerge,
+  ListFilter,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -18,6 +19,7 @@ import {
   Share2,
   Trash2,
   Upload,
+  X,
 } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -52,6 +54,8 @@ import { activatable } from '../../lib/a11y';
 import { useWs } from './context';
 import { ImportModal } from './ImportModal';
 import { useOrganize } from './OrganizeFolders';
+import { StatusIcon, StatusPicker, useStatusMenuItems } from './IntegrationStatus';
+import { INTEGRATION_STATUSES, STATUS_FILTER_LABEL, matchesStatus, type StatusFilter } from '../../lib/integration';
 
 const DND_TYPE = 'application/x-magidoc-item';
 interface DragItem {
@@ -66,6 +70,7 @@ export function CollectionsPanel() {
   const create = useCreateCollection(wsId);
   const openTab = useWorkspaceStore((s) => s.openTab);
   const [filter, setFilter] = useState('');
+  const [status, setStatus] = useState<StatusFilter>('ALL');
   const [importOpen, setImportOpen] = useState(false);
 
   const newCollection = async () => {
@@ -89,15 +94,52 @@ export function CollectionsPanel() {
         )}
       </div>
       <div className="px-3 pb-2">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2 size-3.5 text-faint" />
-          <input
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filter requests"
-            className="h-7 w-full rounded-md bg-panel-2 pl-8 pr-2 text-xs border border-line placeholder:text-faint focus:outline-none focus:ring-accent/40"
+        <div className="flex items-center gap-1">
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute left-2.5 top-2 size-3.5 text-faint" />
+            <input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Filter requests"
+              aria-label="Filter requests"
+              className="h-7 w-full rounded-md bg-panel-2 pl-8 pr-2 text-xs border border-line placeholder:text-faint focus:outline-none focus:ring-accent/40"
+            />
+          </div>
+          <Menu
+            align="right"
+            width={190}
+            items={(['ALL', ...INTEGRATION_STATUSES, 'UNMARKED'] as StatusFilter[]).map((s) => ({
+              label: STATUS_FILTER_LABEL[s],
+              icon: s === 'ALL' || s === 'UNMARKED' ? <ListFilter /> : <StatusIcon status={s} />,
+              checked: status === s,
+              onClick: () => setStatus(s),
+            }))}
+            trigger={(open) => (
+              <button
+                type="button"
+                onClick={open}
+                aria-label={`Filter by integration status: ${STATUS_FILTER_LABEL[status]}`}
+                aria-haspopup="menu"
+                title="Filter by integration status"
+                className={clsx(
+                  'flex size-7 shrink-0 items-center justify-center rounded-md border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50',
+                  status === 'ALL' ? 'border-line bg-panel-2 text-faint hover:text-fg' : 'border-accent/40 bg-accent-soft text-accent-fg',
+                )}
+              >
+                <ListFilter className="size-3.5" />
+              </button>
+            )}
           />
         </div>
+        {status !== 'ALL' && (
+          <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted">
+            {status !== 'UNMARKED' && <StatusIcon status={status} className="size-3" />}
+            <span className="truncate">Showing: {STATUS_FILTER_LABEL[status]}</span>
+            <button type="button" onClick={() => setStatus('ALL')} className="ml-auto flex items-center gap-0.5 rounded px-1 text-faint hover:text-fg cursor-pointer" aria-label="Clear status filter">
+              <X className="size-3" /> Clear
+            </button>
+          </div>
+        )}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-4">
         {isLoading ? (
@@ -115,7 +157,7 @@ export function CollectionsPanel() {
             )}
           />
         ) : (
-          collections.map((c) => <CollectionNode key={c.id} summary={c} filter={filter.trim().toLowerCase()} />)
+          collections.map((c) => <CollectionNode key={c.id} summary={c} filter={filter.trim().toLowerCase()} status={status} />)
         )}
       </div>
       {importOpen && <ImportModal onClose={() => setImportOpen(false)} />}
@@ -123,10 +165,11 @@ export function CollectionsPanel() {
   );
 }
 
-function CollectionNode({ summary, filter }: { summary: CollectionSummary; filter: string }) {
+function CollectionNode({ summary, filter, status }: { summary: CollectionSummary; filter: string; status: StatusFilter }) {
   const { wsId, canEdit } = useWs();
   const [open, setOpen] = useState(false);
-  const expanded = open || !!filter;
+  const filtering = !!filter || status !== 'ALL';
+  const expanded = open || filtering;
   const { data: detail, isLoading } = useCollection(expanded ? summary.id : undefined);
   const openTab = useWorkspaceStore((s) => s.openTab);
   const closeTabsWhere = useWorkspaceStore((s) => s.closeTabsWhere);
@@ -245,7 +288,10 @@ function CollectionNode({ summary, filter }: { summary: CollectionSummary; filte
               <span className="flex-1">{organize.names.length} items look like “Folder/Name”. Organize into folders</span>
             </button>
           )}
-          {detail && <TreeNodes nodes={tree} detail={detail} filter={filter} depth={0} onAddRequest={addRequest} onAddFolder={addFolder} />}
+          {detail && <TreeNodes nodes={tree} detail={detail} filter={filter} status={status} depth={0} onAddRequest={addRequest} onAddFolder={addFolder} />}
+          {detail && filtering && tree.length > 0 && !tree.some((n) => matchesFilter(n, filter, status)) && (
+            <p className="py-1.5 pl-5 text-xs text-faint">No matching requests</p>
+          )}
           {detail && tree.length === 0 && (
             <p className="py-1.5 pl-5 text-xs text-faint">
               Empty —{' '}
@@ -263,18 +309,26 @@ function CollectionNode({ summary, filter }: { summary: CollectionSummary; filte
   );
 }
 
-function matchesFilter(node: TreeNode, filter: string): boolean {
-  if (!filter) return true;
-  if (node.type === 'request') return node.request.name.toLowerCase().includes(filter) || node.request.url.toLowerCase().includes(filter);
-  return node.folder.name.toLowerCase().includes(filter) || node.children.some((c) => matchesFilter(c, filter));
+/** Text matches a request's name/URL or a folder's name; a status filter only ever matches requests. */
+function matchesFilter(node: TreeNode, filter: string, status: StatusFilter): boolean {
+  if (!filter && status === 'ALL') return true;
+  if (node.type === 'request') {
+    const r = node.request;
+    return matchesStatus(r, status) && (!filter || r.name.toLowerCase().includes(filter) || r.url.toLowerCase().includes(filter));
+  }
+  if (status === 'ALL' && node.folder.name.toLowerCase().includes(filter)) return true;
+  return node.children.some((c) => matchesFilter(c, filter, status));
 }
 
-function TreeNodes(props: { nodes: TreeNode[]; detail: CollectionDetail; filter: string; depth: number; onAddRequest: (f: string | null) => void; onAddFolder: (f: string | null) => void }) {
+function TreeNodes(props: { nodes: TreeNode[]; detail: CollectionDetail; filter: string; status: StatusFilter; depth: number; onAddRequest: (f: string | null) => void; onAddFolder: (f: string | null) => void }) {
   return (
     <>
-      {props.nodes
-        .filter((n) => matchesFilter(n, props.filter))
-        .map((n) => (n.type === 'folder' ? <FolderNode key={n.folder.id} node={n} {...props} /> : <RequestNode key={n.request.id} node={n} detail={props.detail} />))}
+      {/* Non-matching items are hidden, not removed, so folders keep their open/closed state when a filter is cleared. */}
+      {props.nodes.map((n) => (
+        <div key={n.type === 'folder' ? n.folder.id : n.request.id} hidden={!matchesFilter(n, props.filter, props.status)}>
+          {n.type === 'folder' ? <FolderNode node={n} {...props} /> : <RequestNode node={n} detail={props.detail} />}
+        </div>
+      ))}
     </>
   );
 }
@@ -282,7 +336,7 @@ function TreeNodes(props: { nodes: TreeNode[]; detail: CollectionDetail; filter:
 function FolderNode({ node, ...props }: { node: Extract<TreeNode, { type: 'folder' }> } & Parameters<typeof TreeNodes>[0]) {
   const { wsId, canEdit } = useWs();
   const [open, setOpen] = useState(false);
-  const expanded = open || !!props.filter;
+  const expanded = open || !!props.filter || props.status !== 'ALL';
   const del = useDeleteFolder(wsId);
   const update = useUpdateFolder(wsId);
   const move = useMoveFolder(wsId);
@@ -371,11 +425,15 @@ function RequestNode({ node, detail }: { node: Extract<TreeNode, { type: 'reques
   const isActive = active === `request:${r.id}`;
   const isOpen = tabs.some((t) => t.id === r.id);
   const open = () => openTab(wsId, { kind: 'request', id: r.id, collectionId: r.collectionId, title: r.name });
+  const statusItems = useStatusMenuItems(r);
 
   const items: (MenuItem | 'divider')[] = [
     { label: 'Open', icon: <FilePlus2 />, onClick: open },
     ...(canEdit
       ? ([
+          'divider',
+          ...statusItems.flatMap((i) => (i === 'divider' ? [] : [{ ...i, label: i.checked === undefined ? i.label : `Status: ${i.label}` }])),
+          'divider',
           {
             label: 'Rename',
             icon: <Pencil />,
@@ -416,7 +474,8 @@ function RequestNode({ node, detail }: { node: Extract<TreeNode, { type: 'reques
       )}
     >
       <MethodText method={draftMethod ?? r.method} className="w-8 shrink-0" />
-      <span className="flex-1 truncate">{r.name}</span>
+      <span className="flex-1 truncate" title={r.name}>{r.name}</span>
+      <StatusPicker request={r} canEdit={canEdit} variant="icon" />
       <Menu
         align="right"
         items={items}

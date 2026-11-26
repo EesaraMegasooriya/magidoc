@@ -88,7 +88,11 @@ export interface ApiRequest {
   examples: ResponseExample[];
   sortOrder: number;
   updatedAt: string;
+  /** Team workflow marker; null/absent = not marked. Never included in public docs. */
+  integrationStatus?: IntegrationStatus | null;
 }
+
+export type IntegrationStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'INTEGRATED';
 
 export type RequestDraft = Pick<
   ApiRequest,
@@ -328,6 +332,7 @@ export interface ExportItem {
   auth?: unknown;
   examples?: unknown;
   items?: ExportItem[];
+  integrationStatus?: string | null;
 }
 
 export interface ExportCollection {

@@ -1,5 +1,5 @@
 import { cn as clsx } from '../lib/cn';
-import { Loader2, Search, X } from 'lucide-react';
+import { Check, Loader2, Search, X } from 'lucide-react';
 import {
   cloneElement,
   isValidElement,
@@ -418,6 +418,8 @@ export interface MenuItem {
   danger?: boolean;
   disabled?: boolean;
   hint?: string;
+  /** Marks the current choice in a pick-one menu (rendered as a radio item with a check). */
+  checked?: boolean;
 }
 
 /** Dropdown menu rendered in a portal (never clipped). Supports keyboard navigation. */
@@ -481,7 +483,8 @@ export function Menu({ trigger, items, align = 'left', width = 210 }: { trigger:
                 <button
                   key={i}
                   type="button"
-                  role="menuitem"
+                  role={item.checked === undefined ? 'menuitem' : 'menuitemradio'}
+                  aria-checked={item.checked}
                   disabled={item.disabled}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -496,6 +499,7 @@ export function Menu({ trigger, items, align = 'left', width = 210 }: { trigger:
                   {item.icon && <span className={clsx('[&>svg]:size-4', item.danger ? 'text-danger' : 'text-muted')}>{item.icon}</span>}
                   <span className="flex-1 truncate">{item.label}</span>
                   {item.hint && <span className="text-[11px] text-faint">{item.hint}</span>}
+                  {item.checked && <Check className="size-3.5 text-accent-fg" aria-hidden="true" />}
                 </button>
               ),
             )}

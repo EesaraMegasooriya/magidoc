@@ -10,6 +10,7 @@ import com.magidoc.collection.CollectionDtos.ExportCollection;
 import com.magidoc.collection.CollectionDtos.FolderDto;
 import com.magidoc.collection.CollectionDtos.MergeRequest;
 import com.magidoc.collection.CollectionDtos.MergeResult;
+import com.magidoc.collection.CollectionDtos.SetIntegrationStatus;
 import com.magidoc.collection.CollectionDtos.OrganizeResult;
 import com.magidoc.collection.CollectionDtos.MoveApiRequest;
 import com.magidoc.collection.CollectionDtos.MoveFolder;
@@ -151,6 +152,11 @@ public class CollectionController {
     @PutMapping("/requests/{id}/move")
     public RequestDto moveRequest(@PathVariable UUID id, @RequestBody MoveApiRequest req) {
         return requestService.move(id, req);
+    }
+
+    @PutMapping("/requests/{id}/integration-status")
+    public RequestDto setIntegrationStatus(@PathVariable UUID id, @RequestBody SetIntegrationStatus req) {
+        return requestService.setIntegrationStatus(id, req);
     }
 
     @PostMapping("/requests/{id}/duplicate")

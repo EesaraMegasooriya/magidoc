@@ -5,6 +5,7 @@ import com.magidoc.activity.ActivityService;
 import com.magidoc.collection.CollectionDtos.CreateApiRequest;
 import com.magidoc.collection.CollectionDtos.MoveApiRequest;
 import com.magidoc.collection.CollectionDtos.RequestDto;
+import com.magidoc.collection.CollectionDtos.SetIntegrationStatus;
 import com.magidoc.collection.CollectionDtos.UpdateApiRequest;
 import com.magidoc.common.ApiException;
 import com.magidoc.common.JsonSupport;
@@ -95,6 +96,20 @@ public class RequestService {
         return mapper.toDto(requests.saveAndFlush(r));
     }
 
+    /** Separate from update() so marking a status never overwrites someone's unsaved edits to the request. */
+    @Transactional
+    public RequestDto setIntegrationStatus(UUID id, SetIntegrationStatus req) {
+        ApiRequest r = load(id);
+        ApiCollection c = collectionService.loadWithAccess(r.getCollectionId(), WorkspaceRole.EDITOR);
+        IntegrationStatus status = IntegrationStatus.parseStrict(req == null ? null : req.status());
+        if (status == r.getIntegrationStatus()) return mapper.toDto(r);
+        r.setIntegrationStatus(status);
+        r = requests.saveAndFlush(r);
+        activity.log(c.getWorkspaceId(), SecurityUtils.currentUserId(), "updated status of", "request",
+                r.getName() + " → " + (status == null ? "not marked" : status.label()));
+        return mapper.toDto(r);
+    }
+
     @Transactional
     public RequestDto duplicate(UUID id) {
         ApiRequest src = load(id);
@@ -111,6 +126,7 @@ public class RequestService {
         r.setBody(src.getBody());
         r.setAuth(src.getAuth());
         r.setExamples(src.getExamples());
+        r.setIntegrationStatus(src.getIntegrationStatus());
         r.setSortOrder(src.getSortOrder() + 1);
         r = requests.saveAndFlush(r);
         activity.log(c.getWorkspaceId(), SecurityUtils.currentUserId(), "duplicated", "request", src.getName());

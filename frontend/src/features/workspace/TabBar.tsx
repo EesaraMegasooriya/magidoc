@@ -13,6 +13,7 @@ import { keys, normalizeDetail } from '../../api/hooks';
 import { api } from '../../lib/api';
 import type { CollectionDetail, Snippet, WebSocketConnection } from '../../types';
 import { useWs } from './context';
+import { AgentIndicator } from './LocalAgent';
 
 export function useNewScratch() {
   const { wsId } = useWs();
@@ -155,6 +156,7 @@ export function TabBar() {
         </button>
       </div>
       <div className="flex shrink-0 items-center gap-2 border-l border-line px-3">
+        <AgentIndicator />
         <Globe2 className="size-3.5 text-faint" />
         <select
           value={envId ?? ''}

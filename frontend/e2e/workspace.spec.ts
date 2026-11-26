@@ -11,6 +11,9 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('send a request through the server-side runner', async ({ page }) => {
+  // Force the server route (localhost would otherwise be sent from the user's computer).
+  await page.evaluate(() => localStorage.setItem('magidoc-runner', JSON.stringify({ state: { mode: 'server' }, version: 0 })));
+  await page.reload();
   await page.getByRole('button', { name: /New request/ }).first().click();
   // Targets MagiDoc's own health endpoint so the test needs no internet access.
   await page.getByLabel('Request URL').fill('http://localhost:8080/actuator/health');

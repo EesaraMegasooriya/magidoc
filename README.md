@@ -62,9 +62,11 @@ Sign up, and you get a personal workspace with a **Getting Started** collection 
 
 ## Production (Docker)
 
+**Step-by-step server guide: [deploy/README.md](deploy/README.md)** (Docker Compose behind your existing nginx with Let's Encrypt HTTPS, backups and updates).
+
 ```bash
-cp .env.example .env              # then set a strong MAGIDOC_JWT_SECRET (openssl rand -base64 48)
-docker compose up --build         # → http://localhost:3000
+cp .env.example .env              # set MAGIDOC_PUBLIC_URL, MAGIDOC_JWT_SECRET, DB_PASSWORD
+docker compose up -d --build      # app on 127.0.0.1:3000 → put nginx/HTTPS in front
 ```
 
 ### Configuration

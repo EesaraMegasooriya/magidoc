@@ -1,41 +1,74 @@
+# MagiDoc production stack.
+#   cp .env.example .env   # then fill in the values
+#   docker compose up -d --build
+# The app listens only on 127.0.0.1:${MAGIDOC_HTTP_PORT}; your host nginx serves it publicly over HTTPS
+# (see deploy/README.md).
+name: magidoc
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: magidoc
       POSTGRES_USER: magidoc
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-magidoc}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    # Memory caps keep MagiDoc from starving other apps on a shared server.
+    mem_limit: 512m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U magidoc -d magidoc"]
       interval: 5s
-      retries: 10
+      timeout: 5s
+      retries: 20
+    logging: *logging
 
   backend:
     build: ./backend
+    restart: unless-stopped
+    # The JVM uses 75% of this for its heap (-XX:MaxRAMPercentage=75 in the Dockerfile).
+    mem_limit: 1g
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_URL: jdbc:postgresql://postgres:5432/magidoc
       DB_USERNAME: magidoc
-      DB_PASSWORD: ${DB_PASSWORD:-magidoc}
-      # REQUIRED: set a long random secret, e.g. `openssl rand -base64 48`
-      MAGIDOC_JWT_SECRET: ${MAGIDOC_JWT_SECRET:?Set MAGIDOC_JWT_SECRET in .env}
-      MAGIDOC_CORS_ORIGINS: ${MAGIDOC_CORS_ORIGINS:-http://localhost:3000}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      MAGIDOC_JWT_SECRET: ${MAGIDOC_JWT_SECRET:?Set MAGIDOC_JWT_SECRET in .env (openssl rand -base64 48)}
+      MAGIDOC_CORS_ORIGINS: ${MAGIDOC_PUBLIC_URL:?Set MAGIDOC_PUBLIC_URL in .env, e.g. https://magidoc.example.com}
+      # Secure cookies require HTTPS (your nginx + certbot). Only set false for a plain-http test.
+      MAGIDOC_COOKIE_SECURE: ${MAGIDOC_COOKIE_SECURE:-true}
+      # Stops the request runner from reaching internal services on your server/network (SSRF protection).
       MAGIDOC_PROXY_BLOCK_PRIVATE: ${MAGIDOC_PROXY_BLOCK_PRIVATE:-true}
-      # Secure cookies need HTTPS. This compose file serves plain http://localhost:3000, so it defaults to false;
-      # set MAGIDOC_COOKIE_SECURE=true when you put it behind HTTPS (always in production).
-      MAGIDOC_COOKIE_SECURE: ${MAGIDOC_COOKIE_SECURE:-false}
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      # The JRE image has bash but no curl: speak HTTP over /dev/tcp.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /actuator/health HTTP/1.0\\r\\n\\r\\n\" >&3 && grep -q UP <&3'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    logging: *logging
 
   frontend:
     build: ./frontend
+    restart: unless-stopped
+    mem_limit: 128m
     ports:
-      - "3000:80"
+      # Loopback only: not reachable from the internet directly, only through your nginx.
+      - "127.0.0.1:${MAGIDOC_HTTP_PORT:-3000}:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    logging: *logging
 
 volumes:
   pgdata:

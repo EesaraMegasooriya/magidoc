@@ -9,6 +9,7 @@ import { Button, EmptyState, FullPageSpinner, Kbd, Menu, RoleBadge, Skeleton } f
 import { CollectionsPanel } from '../features/workspace/CollectionsPanel';
 import { CollectionView } from '../features/workspace/CollectionView';
 import { CommandPalette } from '../features/workspace/CommandPalette';
+import { AgentSetupModal } from '../features/workspace/LocalAgent';
 import { DocsTab } from '../features/workspace/DocsTab';
 import { EnvironmentsPanel } from '../features/workspace/EnvironmentsPanel';
 import { EnvironmentView } from '../features/workspace/EnvironmentView';
@@ -258,6 +259,7 @@ function WorkspaceLayout() {
         </main>
       </div>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onImport={() => setImportOpen(true)} />
+      <AgentSetupModal />
       {importOpen && <ImportModal onClose={() => setImportOpen(false)} />}
     </div>
   );

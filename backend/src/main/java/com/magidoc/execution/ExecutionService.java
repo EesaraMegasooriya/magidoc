@@ -211,7 +211,8 @@ public class ExecutionService {
             boolean uniqueLocalV6 = b.length == 16 && (b[0] & 0xfe) == 0xfc;
             if (addr.isAnyLocalAddress() || addr.isLoopbackAddress() || addr.isLinkLocalAddress()
                     || addr.isSiteLocalAddress() || addr.isMulticastAddress() || uniqueLocalV6) {
-                throw new SecurityException("Requests to private network addresses are disabled on this server");
+                throw new SecurityException("Requests to private network addresses are disabled on this server"
+                        + " - use the MagiDoc Local Agent to reach your own machine");
             }
         }
     }

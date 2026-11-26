@@ -1,8 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
-import { Code2, Loader2, Save, Send } from 'lucide-react';
+import { Code2, Laptop, Loader2, Save, Send } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { executeRequest, keys, useSaveRequest } from '../../api/hooks';
+import { keys, useSaveRequest } from '../../api/hooks';
+import { isLocalTarget, runRequest, useRunner } from '../../lib/runner';
 import { KeyValueEditor } from '../../components/KeyValueEditor';
 import { Markdown } from '../../components/Markdown';
 import { Button, Segmented } from '../../components/ui';
@@ -64,6 +65,9 @@ export function RequestEditor({
   const update = useCallback((patch: Partial<RequestDraft>) => setDraft(draftId, { ...draft, ...patch }), [draft, draftId, setDraft]);
 
   const built = useMemo(() => buildRequest(draft, detail?.collection.auth, scope), [draft, detail, scope]);
+  const runnerMode = useRunner((s) => s.mode);
+  const openSetup = useRunner((s) => s.openSetup);
+  const sendsLocally = !!built.url && (runnerMode === 'agent' || (runnerMode === 'auto' && isLocalTarget(built.url)));
   const missing = useMemo(() => {
     const auth = effectiveAuth(draft, detail?.collection.auth);
     const texts = [
@@ -83,7 +87,7 @@ export function RequestEditor({
     if (!draft.url.trim()) return;
     setResponse(draftId, { loading: true, response: respState?.response });
     try {
-      const res = await executeRequest(wsId, {
+      const res = await runRequest(wsId, {
         method: built.method,
         url: built.url,
         headers: built.headers,
@@ -224,6 +228,16 @@ export function RequestEditor({
             </div>
             <div className="mt-1.5 flex min-h-5 flex-wrap items-center gap-2 text-[11px]">
               {resolvedUrl && <span className="truncate font-mono text-faint" title={resolvedUrl}>→ {resolvedUrl}</span>}
+              {sendsLocally && (
+                <button
+                  type="button"
+                  onClick={openSetup}
+                  className="inline-flex items-center gap-1 rounded bg-panel-3 px-1.5 py-0.5 text-muted hover:text-fg cursor-pointer"
+                  title="This address is on your computer or network, so it's sent from your machine (Local Agent)"
+                >
+                  <Laptop className="size-3" /> sent from your computer
+                </button>
+              )}
               {missing.map((v) => (
                 <span key={v} className="rounded bg-danger-soft px-1.5 py-0.5 font-mono text-danger" title="Not defined in globals, collection or active environment">
                   {`{{${v}}}`} undefined

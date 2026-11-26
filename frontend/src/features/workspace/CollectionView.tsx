@@ -3,7 +3,6 @@ import { BookOpen, CheckCircle2, Copy, ExternalLink, Link2, Loader2, Play, Plus,
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  executeRequest,
   keys,
   useCollection,
   useCreateShare,
@@ -18,6 +17,7 @@ import { MethodText } from '../../components/MethodBadge';
 import { Button, EmptyState, FullPageSpinner, Input, Segmented, Select, Toggle } from '../../components/ui';
 import { VariableEditor } from '../../components/VariableEditor';
 import { errorMessage } from '../../lib/api';
+import { runRequest } from '../../lib/runner';
 import { buildRequest, toDraft } from '../../lib/request';
 import { buildTree, flattenRequests } from '../../lib/tree';
 import { statusColor, timeAgo } from '../../lib/utils';
@@ -202,7 +202,7 @@ function RunnerSection({ detail }: { detail: CollectionDetail }) {
       const built = buildRequest(toDraft(r), detail.collection.auth, scope);
       let result: RunResult;
       try {
-        const res = await executeRequest(wsId, { method: built.method, url: built.url, headers: built.headers, body: built.body, requestId: r.id, requestName: r.name });
+        const res = await runRequest(wsId, { method: built.method, url: built.url, headers: built.headers, body: built.body, requestId: r.id, requestName: r.name });
         result = { id: r.id, name: r.name, method: r.method, status: res.status, durationMs: res.durationMs, error: res.error };
       } catch (e) {
         result = { id: r.id, name: r.name, method: r.method, status: 0, durationMs: 0, error: errorMessage(e) };

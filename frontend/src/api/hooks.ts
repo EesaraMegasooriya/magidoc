@@ -12,7 +12,6 @@ import type {
   CollectionDetail,
   CollectionSummary,
   Environment,
-  ExecuteResponse,
   ExportCollection,
   Folder,
   HistoryItem,
@@ -554,9 +553,6 @@ export interface ExecutePayload {
   followRedirects?: boolean;
   timeoutMs?: number;
 }
-
-export const executeRequest = (wsId: string, payload: ExecutePayload) =>
-  api.post<ExecuteResponse>(`/workspaces/${wsId}/execute`, payload).then((r) => r.data);
 
 export const useHistory = (wsId: string) =>
   useQuery({ queryKey: keys.history(wsId), queryFn: () => get<HistoryItem[]>(`/workspaces/${wsId}/history?limit=150`) });

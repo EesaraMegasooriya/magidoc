@@ -1,8 +1,9 @@
 import clsx from 'clsx';
-import { AlertTriangle, BookmarkPlus, Download, Send, Zap } from 'lucide-react';
+import { AlertTriangle, BookmarkPlus, Download, Laptop, Send, Zap } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { CodeView, CopyButton, tryPrettyJson } from '../../components/CodeView';
 import { Button, Segmented, Spinner } from '../../components/ui';
+import { useRunner } from '../../lib/runner';
 import { formatBytes, statusColor } from '../../lib/utils';
 import type { ExecuteResponse } from '../../types';
 
@@ -18,6 +19,7 @@ export function ResponsePanel({
   onSaveExample?: () => void;
 }) {
   const [tab, setTab] = useState<'body' | 'headers'>('body');
+  const openSetup = useRunner((s) => s.openSetup);
   const [view, setView] = useState<View>('pretty');
 
   const ct = response?.contentType?.toLowerCase() ?? '';
@@ -57,8 +59,13 @@ export function ResponsePanel({
           <AlertTriangle className="size-5" />
         </div>
         <p className="font-medium">Could not send request</p>
-        <p className="max-w-md font-mono text-sm text-danger">{response.error}</p>
+        <p className="max-w-lg text-sm text-danger">{response.error}</p>
         {response.durationMs > 0 && <p className="text-xs text-faint">after {response.durationMs} ms</p>}
+        {response.error.includes('Local Agent') && (
+          <Button variant="primary" size="sm" icon={<Laptop />} onClick={openSetup}>
+            Set up Local Agent
+          </Button>
+        )}
       </div>
     );
   }
@@ -88,6 +95,11 @@ export function ResponsePanel({
         />
         <div className="ml-auto flex items-center gap-3 text-xs">
           {loading && <Spinner className="size-3.5" />}
+          {response.via && response.via !== 'server' && (
+            <span className="inline-flex items-center gap-1 rounded bg-panel-3 px-1.5 py-0.5 text-[11px] text-muted" title={response.via === 'agent' ? 'Sent by the Local Agent on your computer' : 'Sent directly from your browser'}>
+              <Laptop className="size-3" /> {response.via === 'agent' ? 'via Local Agent' : 'via browser'}
+            </span>
+          )}
           <span className={clsx('font-mono font-semibold', statusColor(response.status))}>
             {response.status} {response.statusText}
           </span>

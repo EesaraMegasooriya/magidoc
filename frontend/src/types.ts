@@ -156,6 +156,8 @@ export interface ExecuteResponse {
   size: number;
   truncated: boolean;
   error: string | null;
+  /** Where the request was sent from (set by the client; not part of the server API). */
+  via?: 'server' | 'agent' | 'browser';
 }
 
 export interface HistoryItem {
